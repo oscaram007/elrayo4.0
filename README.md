@@ -113,9 +113,31 @@ As a librarian, I spend my days helping people find information and navigate com
 
 ---
 
-## 📜 License
+## 📜📄 Copyright & License
 
-MIT — free to use, learn from, and remix. If you build something cool with it, I'd love to see it! 🎉
+**Copyright © 2026 by Oscar A. Martinez**
+
+All rights reserved. This software, source code, documentation, and associated materials (collectively, "the Work") are protected under the copyright laws of the United States and international copyright treaties.
+
+### Restrictions
+
+No part of this Work may be reproduced, modified, adapted, distributed, publicly displayed, performed, or transmitted in any form or by any means—including but not limited to electronic, mechanical, digital reproduction, version control systems, code repositories, or cloud storage—without the prior written permission of the author, except as expressly permitted below or under applicable copyright law.
+
+### Permitted Uses
+
+Brief code snippets may be quoted in reviews, tutorials, academic papers, or other noncommercial commentary for purposes of illustration, critique, or education, provided proper attribution is given.
+
+### Prohibited Actions
+
+The following are strictly prohibited without explicit written authorization:
+
+- ❌ Copying, forking, or cloning this code for redistribution
+- ❌ Incorporating this code into other projects, whether open-source or proprietary
+- ❌ Reverse engineering, decompiling, or disassembling any compiled portions
+- ❌ Removing or altering copyright notices, attribution, or licensing information
+- ❌ Commercial use, sublicensing, or sale of this Work or derivatives thereof
+
+**Any unauthorized use, reproduction, or distribution of this Work may result in civil and criminal liability under applicable law. The moral rights of the author have been asserted.**
 
 ---
 
