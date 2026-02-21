@@ -1,14 +1,14 @@
 # 🎭 El Rayo — Luchador Runner
 
-> *A browser-based endless runner game built entirely with HTML, CSS, and JavaScript — no game engines, no libraries, no images, and absolutely no sleep lost over it. (That last part is a lie.)*
+> *A browser-based endless runner game built entirely with HTML, CSS, and JavaScript — no game engines, no libraries, no images, and absolutely LOTS of taco crumbs.
 
 ---
 
 ## 🕹️ What Is This Game?
 
-Think of the little dinosaur game that pops up when your internet goes out — except the dinosaur is a **Mexican wrestler in a flashy costume**, and instead of cacti, you're dodging **mummies, vampires, werewolves, wizards, and Frankenstein**... who are also wrestlers. 🧟‍♂️🧙‍♂️🐺
+Think of the little dinosaur game that pops up when your internet goes out... now instead of the little dinosaur, it's a **Mexican wrestler in a flashy costume**, and instead of cacti, you're dodging **mummies, vampires, werewolves, wizards, and Frankenstein**... who are also wrestlers!!! 🧟‍♂️🧙‍♂️🐺
 
-You tap **Space** (or tap the screen on mobile) to jump over enemies. The longer you survive, the faster everything moves. Collect power-ups, smash rivals, and chase a high score!
+You press the **SPACE** bar to jump over enemies. The longer you survive, the faster everything moves. Collect power-ups, smash rivals, and chase a high score!
 
 Fair warning: it starts easy. Then it doesn't. 😅
 
@@ -17,7 +17,7 @@ Fair warning: it starts easy. Then it doesn't. 😅
 ## ✨ Features
 
 - 🏃 **Endless runner gameplay** — jumps, obstacles, speed ramp
-- 👾 **6 unique rival luchador characters** — each hand-drawn in pixel art
+- 👾 **6 unique rival luchador characters** — each hand-drawn in pixel-style art
 - 🌮 **Power-up system** — collect tacos, belts, and chili peppers to charge special moves
 - 👊 **3 special attacks** — the Lucha Fist, the Super Burrito rocket, and a Fireball
 - ✨ **Invincibility mode** — grab the Golden Chile and smash through everyone for bonus points
@@ -26,7 +26,7 @@ Fair warning: it starts easy. Then it doesn't. 😅
   - 🪅 A swinging piñata rooster on real pendulum physics
   - 🌶️ Scrolling papel picado banners
   - 🕐 A working wall clock (shows your actual time — great for realizing you've been playing for two hours)
-  - 🍾 Scrolling spirit bottles in a mirrored bar shelf
+  - 🍾 Scrolling bottles in a mirrored bar shelf
   - 🌵 Talavera tiles, ceiling fans, and more
 - 📱 **Fully responsive** — scales to any screen size
 
@@ -44,25 +44,25 @@ Fair warning: it starts easy. Then it doesn't. 😅
 
 | Item | What It Does |
 |---|---|
-| 🌮 Taco | Collect 3 to charge a **Super Burrito** rocket |
-| 🏆 Championship Belt | Charges the **Lucha Fist** — a giant golden punch |
-| 🌶️ Red Chili Pepper | Charges a **Fireball** |
-| ✨ Golden Chile | **10 seconds of invincibility** — smash rivals for +150 pts each! |
+| 🌮 Taco | Collect 3 to charge a **SUPER BURRITO** rocket |
+| 🏆 Championship Belt | Charges the **LUCHA FIST** — a giant golden punch |
+| 🌶️ Red Chili Pepper | Charges a **FIREBALL** |
+| ✨ Golden Chile | **10 SECONDS OF INVINCIBILITY** — smash rivals for +150 pts each! |
 
 ---
 
 ## 🧠 What I Learned Building This
 
-This project was a deep dive into **vanilla web development** — no shortcuts, no game engines. Everything was built from scratch using three core tools:
+This project was a deep dive into **web development**. There are no shortcuts or game engines. Everything was built from scratch using three core tools:
 
 ### 🏗️ HTML — *The Skeleton*
 HTML sets up the structure: the canvas (the drawing board), the score display, and the buttons. Think of it like the blueprints for a building.
 
 ### 🎨 CSS — *The Costume*
-CSS controls how everything looks — colors, fonts, layout. The glowing gold title? The dark moody background? That's CSS styling.
+CSS controls how everything looks: colors, fonts, and layout. The glowing gold championship titles? The aesthetic background? That's CSS styling.
 
 ### 🧠 JavaScript — *The Brain*
-This is where the game actually *lives*. Key concepts used:
+This is where the game actually *comes to life*. Key concepts used:
 - **Variables** — tracking score, speed, player position
 - **Functions** — reusable actions like "draw the vampire" or "check for a collision"
 - **Loops** — drawing every floor tile, every banner, every particle
@@ -70,7 +70,7 @@ This is where the game actually *lives*. Key concepts used:
 - **Game loops** — using `requestAnimationFrame` to redraw the screen 60 times per second
 
 ### 🖼️ The Canvas API — *The Paintbrush*
-This is the coolest part: **every single image in this game is made of rectangles.** No photos. No sprite sheets. No image files of any kind. The wrestlers, the neon sign, the rooster, the wall clock — all thousands of tiny colored boxes, carefully stacked and positioned. Learning to "think in rectangles" is a surprisingly powerful skill. Also a great party trick, if you go to the right parties. 🟥🟨
+This is the best part: **every single element in this game is made of rectangles.** No photos. No sprite sheets. No image files of any kind. The wrestlers, the neon sign, the rooster, the wall clock are all thousands of tiny colored boxes, carefully stacked and positioned. Learning to "think in rectangles" is a surprisingly powerful skill. 🟥🟨
 
 ---
 
