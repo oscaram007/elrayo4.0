@@ -1,4 +1,4 @@
-# 🌶️🤜💥 El Rayo — Luchador Runner
+# 🌶️🤜💥🌮 El Rayo — Luchador Runner
 
 > *A browser-based endless runner game built entirely with HTML, CSS, and JavaScript — no game engines, no libraries, no images, and absolutely LOTS of taco crumbs.
 
