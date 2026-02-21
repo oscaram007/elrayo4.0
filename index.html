@@ -1,0 +1,3320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>El Rayo — Luchador Runner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #2a1a0e;
+      --ground: #c8784a;
+      --accent: #ffcc00;
+      --accent2: #ff4f5e;
+      --text: #f5e6d0;
+      --dim: #a08060;
+      --sky1: #3d2010;
+      --sky2: #5a3020;
+    }
+
+    body {
+      background: #2a1a0e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100%;
+      padding: 8px;
+      font-family: 'Press Start 2P', monospace;
+      color: var(--text);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #game-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 2px solid #2a2a4a;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      box-shadow: 0 0 60px rgba(255,204,0,0.08), 0 0 0 1px #1a1a3e;
+    }
+
+    #hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      font-size: 0.75rem;
+      color: var(--dim);
+      background: rgba(10,5,0,0.85);
+      border: 2px solid #2a2a4a;
+      border-bottom: 2px solid #ffcc0044;
+      order: -1;
+    }
+
+    #score-display { color: var(--accent); font-size: 0.85rem; }
+    #hi-display { color: var(--dim); font-size: 0.75rem; }
+    #powerup-display { font-size: 0.65rem !important; }
+
+    /* ── Overlay base ── */
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      transition: opacity 0.4s;
+      background: transparent;
+      overflow: hidden;
+    }
+    #overlay.hidden { opacity: 0; pointer-events: none; }
+
+    /* Dramatic dark vignette over canvas */
+    #overlay::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0) 20%, rgba(0,0,0,0.82) 100%),
+        linear-gradient(to bottom, rgba(10,4,0,0.7) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0) 60%, rgba(10,4,0,0.8) 100%);
+      pointer-events: none;
+    }
+
+    /* Central card */
+    #title-card {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 28px 20px;
+      background: rgba(8,3,0,0.88);
+      border: 2px solid #5a3800;
+      box-shadow:
+        0 0 0 1px #2a1800,
+        0 0 40px rgba(255,160,0,0.15),
+        inset 0 1px 0 rgba(255,200,80,0.12);
+    }
+
+    /* Top ornament line */
+    #title-card::before {
+      content: '─── ✦ ───';
+      font-family: serif;
+      color: #8a5a00;
+      font-size: 0.8rem;
+      letter-spacing: 4px;
+    }
+    #title-card::after {
+      content: '─── ✦ ───';
+      font-family: serif;
+      color: #8a5a00;
+      font-size: 0.8rem;
+      letter-spacing: 4px;
+    }
+
+    /* Venue tag */
+    #title-venue {
+      font-size: 0.5rem;
+      color: #8a6830;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      margin-bottom: -4px;
+    }
+
+    /* TONIGHT label */
+    #title-tonight {
+      font-size: 0.32rem;
+      color: #cc2800;
+      letter-spacing: 6px;
+      border: 1px solid #cc2800;
+      padding: 2px 8px;
+      animation: flicker 3s infinite;
+    }
+
+    /* Main title */
+    #overlay-title {
+      font-size: 2.4rem;
+      color: #ffcc00;
+      text-shadow:
+        0 0 8px rgba(255,200,0,0.9),
+        0 0 30px rgba(255,150,0,0.5),
+        3px 3px 0 #7a4400,
+        4px 4px 0 #3a1800;
+      line-height: 1;
+      letter-spacing: 4px;
+      animation: titlePulse 2s ease-in-out infinite alternate;
+    }
+
+    /* VS divider */
+    #title-vs {
+      font-size: 0.45rem;
+      color: #cc2800;
+      letter-spacing: 8px;
+      text-shadow: 0 0 10px rgba(200,40,0,0.6);
+    }
+
+    /* Foes line */
+    #title-foes {
+      font-size: 0.55rem;
+      color: #d4c0a0;
+      letter-spacing: 3px;
+      text-shadow: 0 0 8px rgba(100,60,0,0.8);
+    }
+
+    /* Subtitle tagline */
+    #overlay-sub {
+      font-size: 0.5rem;
+      color: #7a6040;
+      letter-spacing: 2px;
+      line-height: 2.2;
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    /* Start button */
+    #overlay-btn {
+      margin-top: 6px;
+      padding: 10px 32px;
+      background: linear-gradient(to bottom, #ffdd00, #cc8800);
+      color: #1a0800;
+      border: none;
+      border-bottom: 3px solid #7a4400;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.75rem;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: transform 0.08s, box-shadow 0.08s, filter 0.08s;
+      box-shadow: 0 4px 0 #7a4400, 0 0 20px rgba(255,180,0,0.3);
+      animation: btnGlow 1.8s ease-in-out infinite alternate;
+    }
+    #overlay-btn:hover  { transform: translateY(-2px); box-shadow: 0 6px 0 #7a4400, 0 0 30px rgba(255,180,0,0.5); filter: brightness(1.1); }
+    #overlay-btn:active { transform: translateY(2px);  box-shadow: 0 2px 0 #7a4400; filter: brightness(0.9); }
+
+    #controls-hint {
+      font-size: 0.5rem;
+      color: #4a3820;
+      letter-spacing: 2px;
+      margin-top: 2px;
+    }
+
+    /* Lucha poster corner stamps */
+    .stamp {
+      position: absolute;
+      z-index: 3;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.5rem;
+      padding: 3px 6px;
+      border: 1px solid currentColor;
+      pointer-events: none;
+    }
+    #stamp-tl { top: 8px; left: 8px; color: #cc2800; transform: rotate(-8deg); }
+    #stamp-tr { top: 8px; right: 8px; color: #cc8800; transform: rotate(6deg); }
+    #stamp-bl { bottom: 8px; left: 8px; color: #cc8800; transform: rotate(5deg); }
+    #stamp-br { bottom: 8px; right: 8px; color: #cc2800; transform: rotate(-4deg); }
+
+    @keyframes titlePulse {
+      from { text-shadow: 0 0 8px rgba(255,200,0,0.9), 0 0 30px rgba(255,150,0,0.5), 3px 3px 0 #7a4400, 4px 4px 0 #3a1800; }
+      to   { text-shadow: 0 0 16px rgba(255,220,0,1),  0 0 60px rgba(255,180,0,0.8), 3px 3px 0 #7a4400, 4px 4px 0 #3a1800; }
+    }
+    @keyframes btnGlow {
+      from { box-shadow: 0 4px 0 #7a4400, 0 0 12px rgba(255,180,0,0.2); }
+      to   { box-shadow: 0 4px 0 #7a4400, 0 0 28px rgba(255,180,0,0.6); }
+    }
+    @keyframes flicker {
+      0%,100% { opacity: 1; }
+      92%      { opacity: 1; }
+      93%      { opacity: 0.2; }
+      94%      { opacity: 1; }
+      96%      { opacity: 0.4; }
+      97%      { opacity: 1; }
+    }
+    @keyframes pulse {
+      from { opacity: 0.7; } to { opacity: 1; }
+    }
+    #copyright {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.5rem;
+      color: #ffffff;
+      letter-spacing: 2px;
+      text-align: center;
+      padding: 8px 4px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-wrapper">
+    <div id="hud">
+      <span id="hi-display">HI <span id="hi">00000</span></span>
+      <span id="powerup-display" style="display:flex;gap:8px;align-items:center;"></span>
+      <span id="score-display">SCORE <span id="score">00000</span></span>
+    </div>
+
+    <canvas id="canvas" width="800" height="280"></canvas>
+
+    <div id="overlay">
+      <!-- Corner stamps — lucha poster style -->
+      <div class="stamp" id="stamp-tl">TAQUERIA<br>EL CAMPEON</div>
+      <div class="stamp" id="stamp-tr">LUCHADOR<br>RUNNER</div>
+      <div class="stamp" id="stamp-bl">CAMPEON</div>
+      <div class="stamp" id="stamp-br">PELIGROSO</div>
+
+      <!-- Central title card -->
+      <div id="title-card">
+        <div id="title-tonight">✶ ESTA NOCHE ✶</div>
+        <div id="title-venue">TAQUERIA EL CAMPEON · CANTINA</div>
+        <div id="overlay-title">EL RAYO</div>
+        <div id="title-vs">⚡ VS ⚡</div>
+        <div id="title-foes">VAMPIRO · MOMIA · FRANKENSTEIN<br>HOMBRE LOBO · MAGO · FANTASMA</div>
+        <div id="overlay-sub">SALTA LOS OBSTÁCULOS<br>¡DESTRUYE A TUS RIVALES!</div>
+        <button id="overlay-btn">▶ ¡LUCHAR!</button>
+        <div id="controls-hint">ESPACIO / TOQUE PARA SALTAR &nbsp;·&nbsp; ENTER PARA DISPARAR</div>
+      </div>
+    </div>
+  </div>
+  <div id="copyright">&copy; 2026 ALL RIGHTS RESERVED &nbsp;·&nbsp; OSCAR A. MARTINEZ</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height; // internal resolution stays fixed
+
+// --- Dynamic sizing: scale CSS display size to fit viewport ---
+const gameWrapper = document.getElementById('game-wrapper');
+function resizeGame() {
+  const maxW = window.innerWidth  - 16; // 8px padding each side
+  const maxH = window.innerHeight - 80; // leave room for title + HUD
+  const scaleByW = maxW / W;
+  const scaleByH = maxH / H;
+  const scale    = Math.min(scaleByW, scaleByH);
+  const cssW     = Math.floor(W * scale);
+  const cssH     = Math.floor(H * scale);
+  canvas.style.width  = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  gameWrapper.style.width = cssW + 'px';
+}
+resizeGame();
+window.addEventListener('resize', resizeGame);
+
+const scoreEl = document.getElementById('score');
+const hiEl = document.getElementById('hi');
+const overlay = document.getElementById('overlay');
+const overlayTitle = document.getElementById('overlay-title');
+const overlaySub = document.getElementById('overlay-sub');
+const overlayBtn = document.getElementById('overlay-btn');
+const powerupEl  = document.getElementById('powerup-display');
+
+// --- Palette ---
+const C = {
+  bg: '#0d0d0d',
+  sky: ['#0d0d0d','#16213e'],
+  ground: '#c8784a',
+  groundLine: '#a05a30',
+  wall: '#d4956a',
+  accent: '#ffcc00',
+  accent2: '#ff4f5e',
+  player: '#ffcc00',
+  playerShadow: '#cc8800',
+  obstacle: '#ff4f5e',
+  obstacleShadow: '#8a0010',
+  particle: ['#ffcc00','#ff4f5e','#ffffff','#cc1a1a'],
+  ground2: '#b06040',
+};
+
+// --- State ---
+let state = 'idle'; // idle | playing | dead
+let score = 0;
+let hiScore = 0;
+let speed = 4;
+let frame = 0;
+let gameLoop;
+
+// --- Stucco texture dots ---
+const stucco = Array.from({length:120}, () => ({
+  x: Math.random()*W,
+  y: Math.random()*(H*0.72),
+  w: Math.floor(Math.random()*4)+1,
+  h: Math.floor(Math.random()*2)+1,
+  c: Math.random() < 0.5 ? '#c07850' : '#e8b090',
+}));
+
+// --- Tile scroll offset ---
+let tileOffset = 0;
+
+// --- Edison bulbs ---
+const BULB_COUNT = 6;
+const bulbs = Array.from({length: BULB_COUNT}, (_, i) => ({
+  x: (W / BULB_COUNT) * i + (W / BULB_COUNT / 2),
+  cordLen: 18 + Math.random() * 14,
+  flicker: Math.random() * Math.PI * 2,
+  flickerSpeed: 0.03 + Math.random() * 0.02,
+  warmth: 0.85 + Math.random() * 0.15,
+}));
+
+// --- Neon sign state ---
+let neonPhase = 0;
+let neonBuzz = 1;
+let neonBuzzTimer = 0;
+
+// --- Shelf scroll ---
+let shelfOffset = 0;
+
+// --- Papel Picado ---
+let papelOffset = 0;
+// Two strings of banners at different heights for depth
+const PAPEL_STRINGS = [
+  { y: 8,  sag: 10, speed: 0.6, bannerH: 22, bannerW: 18, gap: 6 },
+  { y: 16, sag: 7,  speed: 0.4, bannerH: 18, bannerW: 14, gap: 5 },
+];
+// Colour palette — traditional papel picado: bright, festive
+const PAPEL_COLORS = [
+  '#ff2d55', // red-pink
+  '#ff9f0a', // orange
+  '#ffd60a', // yellow
+  '#30d158', // green
+  '#0a84ff', // blue
+  '#bf5af2', // purple
+  '#ff375f', // hot pink
+  '#34c759', // lime
+];
+// Each banner has a cut-out pattern index
+const PAPEL_PATTERNS = ['diamond', 'cross', 'star', 'zigzag', 'circle'];
+
+// --- Static wall décor (luchador mask frame, fixed position) ---
+const maskFrame = { x: 30, y: 46 };
+
+// --- Clock state ---
+let clockTime = new Date();
+let clockTick = 0;
+
+// --- Ceiling fan ---
+let fanAngle = 0;
+const FAN_X = 450, FAN_Y = 44; // hangs below papel picado
+
+// --- Piñata ---
+const PINATA_PIVOT = { x: 260, y: 10 };
+const PINATA_ROPE  = 52; // rope length
+let pinataAngle    = 0.4; // starting tilt (radians)
+let pinataVel      = 0;
+const PINATA_GRAV  = 0.012;
+const PINATA_DAMP  = 0.992;
+
+// --- Ground ---
+const GROUND_Y = H - 50;
+const GROUND_H = 50;
+
+// --- Player ---
+const player = {
+  x: 80, y: GROUND_Y, w: 28, h: 52,
+  vy: 0, jumping: false,
+  legFrame: 0,
+  particles: [],
+  trail: [],
+};
+const GRAVITY = 0.7;
+const JUMP_FORCE = -14;
+
+function resetPlayer() {
+  player.y = GROUND_Y;
+  player.vy = 0;
+  player.jumping = false;
+  player.particles = [];
+  player.trail = [];
+}
+
+// --- Obstacles ---
+let obstacles = [];
+let obstacleCooldown = 0;
+
+// Rival luchador types
+const RIVAL_TYPES = ['vampire','mummy','frankenstein','werewolf','wizard','ghost'];
+const RIVAL_SCALE = 1.55;
+const RIVAL_SIZES = {
+  vampire:      { w: Math.round(28*RIVAL_SCALE), h: Math.round(52*RIVAL_SCALE) },
+  mummy:        { w: Math.round(28*RIVAL_SCALE), h: Math.round(52*RIVAL_SCALE) },
+  frankenstein: { w: Math.round(28*RIVAL_SCALE), h: Math.round(52*RIVAL_SCALE) },
+  werewolf:     { w: Math.round(28*RIVAL_SCALE), h: Math.round(52*RIVAL_SCALE) },
+  wizard:       { w: Math.round(28*RIVAL_SCALE), h: Math.round(52*RIVAL_SCALE) },
+  ghost:        { w: Math.round(28*RIVAL_SCALE), h: Math.round(52*RIVAL_SCALE) },
+};
+
+// Animation frame per rival
+let rivalFrame = 0;
+
+function spawnObstacle() {
+  const roll = Math.random();
+  let type;
+  if (roll < 0.18) type = 'chair';
+  else if (roll < 0.32) type = 'trashcan';
+  else type = RIVAL_TYPES[Math.floor(Math.random() * RIVAL_TYPES.length)];
+
+  const isRival = RIVAL_TYPES.includes(type);
+  const sz = isRival ? RIVAL_SIZES[type] : { w: type==='chair'?28:22, h: type==='chair'?38:34 };
+  const count = (!isRival && Math.random() < 0.3) ? 2 : 1;
+  const spacing = sz.w + 10;
+
+  for (let i = 0; i < count; i++) {
+    obstacles.push({
+      x: W + i * spacing,
+      y: GROUND_Y - sz.h + player.h,
+      w: sz.w, h: sz.h, type,
+    });
+  }
+}
+
+function spawnCollectible() {
+  const roll = Math.random();
+  const type = roll < 0.12 ? 'chile' : roll < 0.22 ? 'chili_pepper' : (roll < 0.55 ? 'belt' : 'taco');
+  // Float above ground at jump height so player must time a jump to get it
+  const floatH = Math.random() < 0.5
+    ? 0                          // ground level — easy
+    : Math.round(20 + Math.random() * 30); // elevated — requires jump
+  const h = type === 'belt' ? 16 : type === 'taco' ? 22 : type === 'chili_pepper' ? 20 : 26;
+  const w = type === 'belt' ? 28 : type === 'taco' ? 26 : type === 'chili_pepper' ? 12 : 18;
+  collectibles.push({
+    x: W + 20,
+    y: GROUND_Y - floatH - h,
+    w, h, type,
+    bob: Math.random() * Math.PI * 2, // individual bob phase
+  });
+}
+
+// --- Ground decorations (not used, tiles handle it) ---
+let groundDots = [];
+
+// --- Collectibles ---
+let collectibles = [];
+let collectibleCooldown = 180; // spawn every ~3s initially
+
+// Float animation helpers
+let collectibleBob = 0;
+
+// Score popup messages
+let popups = [];
+
+// --- Invincibility (golden chile) ---
+let invincible = 0;
+let invincibleGlow = 0;
+
+// --- Power-up charges ---
+let tacoCount   = 0;   // 0-3, fires burrito at 3
+let hasBurrito  = false;
+let hasFist     = false;
+let hasFireball = false;
+
+// --- Projectiles ---
+let projectiles = [];
+
+// --- Particles ---
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    player.particles.push({
+      x, y,
+      vx: (Math.random()-0.5)*5,
+      vy: -Math.random()*5-2,
+      life: 1, decay: 0.04+Math.random()*0.04,
+      color: C.particle[Math.floor(Math.random()*C.particle.length)],
+      r: 2+Math.random()*3,
+    });
+  }
+}
+
+// --- Drawing helpers ---
+function drawPixelRect(x, y, w, h, color, shadow) {
+  ctx.fillStyle = shadow || color;
+  ctx.fillRect(Math.round(x)+3, Math.round(y)+4, w, h);
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.round(x), Math.round(y), w, h);
+}
+
+function drawLuchador(px, py, inAir, alpha, palette) {
+  px = Math.round(px); py = Math.round(py);
+  ctx.globalAlpha = alpha !== undefined ? alpha : 1;
+
+  // Default palette (normal costume)
+  const P = palette || {
+    cape:        '#cc1a1a',
+    capeHi:      '#ee2222',
+    capeSheen:   '#ff6666',
+    skin:        '#c8824a',
+    skinHi:      '#d8926a',
+    muscle:      '#b06832',
+    trunks:      '#cc1a1a',
+    waistband:   '#ffcc00',
+    glove:       '#cc1a1a',
+    gloveDark:   '#333333',
+    maskBase:    '#cc1a1a',
+    maskBand:    '#ffcc00',
+    maskPanel:   '#f0f0f0',
+    eyeHole:     '#1a0000',
+    eyeGlow:     '#ff4f5e',
+    hornSide:    '#cc1a1a',
+    hornCenter:  '#ffcc00',
+    boot:        '#cc1a1a',
+    bootDark:    '#222222',
+    chin:        '#c8824a',
+    nose:        '#b06030',
+  };
+
+  const S = (x,y,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(px+x, py+y, w, h); };
+
+  // --- Cape ---
+  const capeOffset = inAir ? -3 : 0;
+  const capeFlap   = inAir ? Math.sin(frame*0.3)*4 : 0;
+  S(-6, 4+capeOffset, 8, 22+capeFlap, P.cape);
+  S(-4, 6+capeOffset, 6, 18+capeFlap, P.capeHi);
+  S(-5, 5+capeOffset, 2, 14+capeFlap, P.capeSheen);
+
+  // --- Torso ---
+  S(4, 10, 20, 16, P.skin);
+  S(4, 10, 20,  2, P.skinHi);
+  S(8,  14, 4, 6, P.muscle);
+  S(16, 14, 4, 6, P.muscle);
+  S(12, 13, 4, 2, P.muscle);
+
+  // --- Trunks ---
+  S(4, 26, 20, 10, P.trunks);
+  S(4, 26, 20,  3, P.waistband);
+  S(10, 29, 8,  7, P.trunks);
+  S(4,  29, 3,  7, P.waistband);
+  S(21, 29, 3,  7, P.waistband);
+
+  // --- Arms ---
+  S(0,  11, 5, 14, P.skin);
+  S(0,  23, 5,  4, P.gloveDark);
+  S(0,  25, 6,  7, P.glove);
+  S(23, 11, 5, 14, P.skin);
+  S(23, 23, 5,  4, P.gloveDark);
+  S(22, 25, 6,  7, P.glove);
+
+  // --- Mask ---
+  S(5,  0, 18, 13, P.maskBase);
+  S(5,  0, 18,  3, P.maskBand);
+  S(5,  3,  4, 10, P.maskPanel);
+  S(19, 3,  4, 10, P.maskPanel);
+  S(7,  5,  5,  4, P.eyeHole);
+  S(16, 5,  5,  4, P.eyeHole);
+  S(8,  6,  3,  2, P.eyeGlow);
+  S(17, 6,  3,  2, P.eyeGlow);
+  S(12, 9,  4,  2, P.nose);
+  S(7,  12, 14, 3, P.chin);
+  S(8,  -4, 4,  5, P.hornSide);
+  S(16, -4, 4,  5, P.hornSide);
+  S(12, -6, 4,  7, P.hornCenter);
+
+  // --- Legs & Boots ---
+  const legAnim = inAir ? 0 : Math.floor(frame/5) % 2;
+  const lLegY = legAnim === 0 ? 2 : 0;
+  S(6,  36, 8, 10+lLegY, P.skin);
+  S(6,  44+lLegY, 9, 6,  P.bootDark);
+  S(5,  46+lLegY, 10, 5, P.boot);
+  S(5,  50+lLegY, 12, 2, P.bootDark);
+  const rLegY = legAnim === 1 ? 2 : 0;
+  S(14, 36, 8, 10+rLegY, P.skin);
+  S(14, 44+rLegY, 9, 6,  P.bootDark);
+  S(13, 46+rLegY, 10, 5, P.boot);
+  S(13, 50+rLegY, 12, 2, P.bootDark);
+
+  if (inAir) {
+    ctx.fillStyle = P.skin;
+    ctx.fillRect(px+4,  py+38, 10, 6);
+    ctx.fillRect(px+14, py+36, 10, 8);
+    ctx.fillStyle = P.boot;
+    ctx.fillRect(px+3,  py+42, 11, 5);
+    ctx.fillRect(px+14, py+42, 11, 5);
+    ctx.fillStyle = P.bootDark;
+    ctx.fillRect(px+3,  py+46, 13, 2);
+    ctx.fillRect(px+14, py+46, 13, 2);
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// Invincible palette — white, gold, silver
+const PALETTE_INVINCIBLE = {
+  cape:       '#e8e8ff',
+  capeHi:     '#ffffff',
+  capeSheen:  '#ffd700',
+  skin:       '#f0e8d8',
+  skinHi:     '#ffffff',
+  muscle:     '#c8c0a8',
+  trunks:     '#ffd700',
+  waistband:  '#ffffff',
+  glove:      '#c0c8d8',
+  gloveDark:  '#8090a8',
+  maskBase:   '#f8f8f8',
+  maskBand:   '#ffd700',
+  maskPanel:  '#ffd700',
+  eyeHole:    '#1a1a2a',
+  eyeGlow:    '#ffd700',
+  hornSide:   '#c8d0e0',
+  hornCenter: '#ffd700',
+  boot:       '#c8d0e0',
+  bootDark:   '#8090a8',
+  chin:       '#f0e8d8',
+  nose:       '#d0c8b0',
+};
+
+function drawPlayer() {
+  const px = player.x, py = player.y - 16;
+  const inAir = player.jumping;
+
+  // Angelic invincibility aura
+  if (invincible > 0) {
+    const prog   = invincible / 600; // 1.0 -> 0.0 over 10s
+    // Flicker fast in last 2 seconds
+    const flicker = invincible < 120 ? Math.sin(frame * 0.6) > 0 : true;
+
+    if (flicker) {
+      // Outer halo — large soft gold/white radial
+      const cx2 = px + player.w / 2;
+      const cy2 = py + player.h / 2;
+      const haloR = 38 + 6 * Math.sin(invincibleGlow * 0.8);
+
+      const halo = ctx.createRadialGradient(cx2, cy2, 4, cx2, cy2, haloR);
+      halo.addColorStop(0,   `rgba(255,255,180,${0.55 * prog})`);
+      halo.addColorStop(0.35,`rgba(255,220,80,${0.35 * prog})`);
+      halo.addColorStop(0.7, `rgba(255,180,20,${0.18 * prog})`);
+      halo.addColorStop(1,   'rgba(255,160,0,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(cx2, cy2, haloR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner core bright burst
+      const core = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, 20);
+      core.addColorStop(0,   `rgba(255,255,255,${0.4 * prog})`);
+      core.addColorStop(0.5, `rgba(255,240,120,${0.2 * prog})`);
+      core.addColorStop(1,   'rgba(255,200,0,0)');
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(cx2, cy2, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Orbiting light motes
+      for (let m = 0; m < 5; m++) {
+        const mAng  = invincibleGlow * 1.2 + (m / 5) * Math.PI * 2;
+        const mDist = 24 + 4 * Math.sin(invincibleGlow * 2 + m);
+        const mx2   = cx2 + Math.cos(mAng) * mDist;
+        const my2   = cy2 + Math.sin(mAng) * mDist * 0.6;
+        const mSize = 2 + Math.abs(Math.sin(invincibleGlow * 3 + m)) * 2;
+        ctx.fillStyle = `rgba(255,255,180,${0.8 * prog})`;
+        ctx.fillRect(Math.round(mx2 - mSize/2), Math.round(my2 - mSize/2), Math.ceil(mSize), Math.ceil(mSize));
+      }
+
+      // Golden trail instead of normal trail
+      player.trail.forEach((t2, i) => {
+        const a = (i / player.trail.length) * 0.3 * prog;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = '#ffd700';
+        ctx.fillRect(Math.round(t2.x), Math.round(t2.y - 16), player.w, player.h);
+        ctx.globalAlpha = 1;
+      });
+    }
+  } else {
+    // Normal ghost trail
+    player.trail.forEach((t2, i) => {
+      const a = (i / player.trail.length) * 0.18;
+      drawLuchador(t2.x, t2.y - 16, inAir, a);
+    });
+  }
+
+  // Pass gold/silver palette when invincible (flicker in last 2s)
+  const useInvPalette = invincible > 0 && (invincible >= 120 || Math.sin(frame * 0.6) > 0);
+  drawLuchador(px, py, inAir, 1, useInvPalette ? PALETTE_INVINCIBLE : null);
+}
+
+function drawChair(ox, oy) {
+  const x = Math.round(ox), y = Math.round(oy);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx, y+dy, w, h); };
+  // Shadow
+  S(3, 4, 28, 38, '#1a0a0a');
+  // Seat
+  S(0,  12, 28, 5,  '#aaa');
+  S(0,  14, 28, 8,  '#888');
+  S(0,  20, 28, 3,  '#666');
+  // Backrest
+  S(2,   0, 24, 2,  '#bbb');
+  S(2,   2, 24, 10, '#999');
+  S(2,  10, 24, 3,  '#777');
+  S(2,   0,  3, 14, '#777');
+  S(23,  0,  3, 14, '#777');
+  // Backrest slats
+  S(7,  2, 3, 10, '#aaa');
+  S(13, 2, 3, 10, '#aaa');
+  S(19, 2, 3, 10, '#aaa');
+  // Legs
+  S(2,  23, 3, 16, '#777');
+  S(23, 23, 3, 16, '#777');
+  // Feet
+  S(1,  37, 5, 2, '#888');
+  S(22, 37, 5, 2, '#888');
+  // Cross brace
+  S(4, 30, 20, 2, '#666');
+  // Shine
+  S(3, 14, 4, 2, '#ccc');
+}
+
+function drawTrashCan(ox, oy) {
+  const x = Math.round(ox), y = Math.round(oy);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx, y+dy, w, h); };
+  // Shadow
+  S(3, 4, 22, 34, '#111');
+  // Lid
+  S(-1, 0, 24, 4, '#bbb');
+  S(0,  2, 22, 4, '#ccc');
+  S(7,  0,  8, 2, '#999');
+  S(9, -4,  4, 5, '#aaa');
+  S(0,  5, 22, 2, '#999');
+  // Body
+  S(0,  7, 22, 26, '#999');
+  S(1,  8, 20, 24, '#aaa');
+  S(1,  8,  3, 24, '#ccc');
+  S(18, 8,  2, 24, '#888');
+  // Ribs
+  S(1, 14, 20, 2, '#888');
+  S(1, 22, 20, 2, '#888');
+  S(1, 30, 20, 2, '#888');
+  // Base
+  S(-1, 33, 24, 4, '#888');
+  S(0,  35, 22, 3, '#777');
+  // Battle dents
+  S(5,  16, 3, 3, '#888');
+  S(14, 24, 4, 2, '#999');
+  S(8,  28, 2, 4, '#888');
+}
+
+function drawObstacle(obs) {
+  if (obs.type === 'chair')         drawChair(obs.x, obs.y);
+  else if (obs.type === 'trashcan') drawTrashCan(obs.x, obs.y);
+  else {
+    // Scale rivals up — pivot from their bottom-left corner
+    const footX = obs.x;
+    const footY = obs.y + obs.h;
+    ctx.save();
+    ctx.translate(footX, footY);
+    ctx.scale(RIVAL_SCALE, RIVAL_SCALE);
+    ctx.translate(-footX, -footY);
+    // Draw at original unscaled coords — transform does the scaling
+    const ux = obs.x;
+    const uy = footY - 52; // unscaled height
+    if      (obs.type === 'vampire')      drawRivalVampire(ux, uy);
+    else if (obs.type === 'mummy')        drawRivalMummy(ux, uy);
+    else if (obs.type === 'frankenstein') drawRivalFrankenstein(ux, uy);
+    else if (obs.type === 'werewolf')     drawRivalWerewolf(ux, uy);
+    else if (obs.type === 'wizard')       drawRivalWizard(ux, uy);
+    else if (obs.type === 'ghost')        drawRivalGhost(ux, uy);
+    ctx.restore();
+  }
+}
+
+
+// ═══════════════════════════════════════════════
+//  RIVAL LUCHADORS
+// ═══════════════════════════════════════════════
+
+function drawRivalBase(ox, oy, palette) {
+  // Shared luchador body structure — reuses palette like the player
+  const x = Math.round(ox), y = Math.round(oy);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+  const leg = rivalFrame % 2;
+
+  // Cape
+  const cf = Math.sin(rivalFrame * 0.3) * 2;
+  S(-4, 4, 7, 20+cf, palette.cape);
+  S(-3, 5, 5, 16+cf, palette.capeHi);
+
+  // Torso
+  S(4, 10, 20, 16, palette.skin);
+  S(4, 10, 20,  2, palette.skinHi);
+  S(8, 14, 4, 6, palette.muscle);
+  S(16,14, 4, 6, palette.muscle);
+
+  // Trunks
+  S(4, 26, 20, 10, palette.trunks);
+  S(4, 26, 20,  3, palette.waistband);
+  S(4, 29,  3,  7, palette.waistband);
+  S(21,29,  3,  7, palette.waistband);
+
+  // Arms
+  S(0, 11, 5, 14, palette.skin);
+  S(0, 23, 5,  4, palette.gloveDark);
+  S(0, 25, 6,  7, palette.glove);
+  S(23,11, 5, 14, palette.skin);
+  S(23,23, 5,  4, palette.gloveDark);
+  S(22,25, 6,  7, palette.glove);
+
+  // Mask
+  S(5,  0, 18, 13, palette.maskBase);
+  S(5,  0, 18,  3, palette.maskBand);
+  S(5,  3,  4, 10, palette.maskPanel);
+  S(19, 3,  4, 10, palette.maskPanel);
+  S(7,  5,  5,  4, palette.eyeHole);
+  S(16, 5,  5,  4, palette.eyeHole);
+  S(8,  6,  3,  2, palette.eyeGlow);
+  S(17, 6,  3,  2, palette.eyeGlow);
+  S(7, 12, 14,  3, palette.chin);
+  S(8, -4,  4,  5, palette.hornSide);
+  S(16,-4,  4,  5, palette.hornSide);
+  S(12,-6,  4,  7, palette.hornCenter);
+
+  // Legs
+  const lLegY = leg === 0 ? 2 : 0;
+  S(6,  36, 8, 10+lLegY, palette.skin);
+  S(6,  44+lLegY, 9, 6,  palette.bootDark);
+  S(5,  46+lLegY,10, 5,  palette.boot);
+  S(5,  50+lLegY,12, 2,  palette.bootDark);
+  const rLegY = leg === 1 ? 2 : 0;
+  S(14, 36, 8, 10+rLegY, palette.skin);
+  S(14, 44+rLegY, 9, 6,  palette.bootDark);
+  S(13, 46+rLegY,10, 5,  palette.boot);
+  S(13, 50+rLegY,12, 2,  palette.bootDark);
+}
+
+// ── VAMPIRE LUCHADOR ──────────────────────────
+function drawRivalVampire(ox, oy) {
+  const x = Math.round(ox), y = Math.round(oy);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  drawRivalBase(ox, oy, {
+    cape: '#4a0080', capeHi: '#6a00b0',
+    skin: '#d8c8e0', skinHi: '#ecdde8', muscle: '#b0a0bc',
+    trunks: '#1a001a', waistband: '#cc0030',
+    glove: '#1a001a', gloveDark: '#0a000a',
+    maskBase: '#1a001a', maskBand: '#cc0030',
+    maskPanel: '#d8c8e0', eyeHole: '#0a0008',
+    eyeGlow: '#ff0040', hornSide: '#4a0080', hornCenter: '#cc0030',
+    boot: '#1a001a', bootDark: '#0a0008',
+    chin: '#d8c8e0', nose: '#b090b8',
+  });
+
+  // Vampire fangs below mask chin
+  S(10, 14, 2, 4, '#f8f0ff');
+  S(15, 14, 2, 4, '#f8f0ff');
+  // Widow's peak on forehead
+  S(12, -2, 4, 3, '#1a001a');
+  S(11, -1, 6, 2, '#1a001a');
+  // Bat wing collar
+  S(-6, 6, 8, 4, '#4a0080');
+  S(26, 6, 8, 4, '#4a0080');
+  S(-8, 4, 5, 3, '#6a00b0');
+  S(27, 4, 5, 3, '#6a00b0');
+  // Blood drip on chin
+  S(13, 14, 2, 5, '#cc0020');
+}
+
+// ── MUMMY LUCHADOR ──────────────────────────
+function drawRivalMummy(ox, oy) {
+  const x = Math.round(ox), y = Math.round(oy);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  drawRivalBase(ox, oy, {
+    cape: '#c8b890', capeHi: '#ddd0a8',
+    skin: '#e8dcc0', skinHi: '#f4ecdc', muscle: '#c8b890',
+    trunks: '#b8a870', waistband: '#e8c840',
+    glove: '#d8c8a0', gloveDark: '#a89870',
+    maskBase: '#e8dcc0', maskBand: '#e8c840',
+    maskPanel: '#d8c8a0', eyeHole: '#1a1000',
+    eyeGlow: '#88cc00', hornSide: '#c8b890', hornCenter: '#e8c840',
+    boot: '#c8b890', bootDark: '#9a8860',
+    chin: '#e8dcc0', nose: '#c8b890',
+  });
+
+  // Bandage wrapping strips
+  for (let b = 0; b < 5; b++) {
+    S(3, 10 + b*8, 22, 2, `rgba(240,224,192,0.7)`);
+  }
+  // Cross bandages
+  S(4, 11, 20, 1, '#d8c8a0');
+  S(4, 19, 20, 1, '#d8c8a0');
+  S(4, 27, 20, 1, '#d8c8a0');
+  // Loose bandage ends trailing
+  const dangle = Math.sin(rivalFrame * 0.2) * 3;
+  S(20, 24, 3, 10+dangle, '#e8dcc0');
+  S(6,  32, 3,  8+dangle, '#d8c8a0');
+  // Glowing eyes (green through bandages)
+  S(8,  6, 3, 2, '#00cc40');
+  S(17, 6, 3, 2, '#00cc40');
+}
+
+// ── FRANKENSTEIN LUCHADOR ──────────────────────
+function drawRivalFrankenstein(ox, oy) {
+  const x = Math.round(ox), y = Math.round(oy);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  drawRivalBase(ox, oy, {
+    cape: '#2a4a20', capeHi: '#3a6a28',
+    skin: '#7aa870', skinHi: '#9acc88', muscle: '#5a8858',
+    trunks: '#1a2a18', waistband: '#88aa20',
+    glove: '#2a4a20', gloveDark: '#1a2a10',
+    maskBase: '#6a9860', maskBand: '#88aa20',
+    maskPanel: '#9acc88', eyeHole: '#0a0f08',
+    eyeGlow: '#ccff00', hornSide: '#4a7040', hornCenter: '#88aa20',
+    boot: '#1a2a18', bootDark: '#0a1008',
+    chin: '#7aa870', nose: '#5a8858',
+  });
+
+  // Flat-top head extension (Frankenstein flat top)
+  S(4, -10, 20, 10, '#6a9860');
+  S(4, -10, 20,  2, '#9acc88');
+  S(3, -10,  2, 10, '#5a8858');
+  S(23,-10,  2, 10, '#5a8858');
+
+  // Neck bolts
+  S(-2, 8, 5, 6, '#556650');
+  S(25,  8, 5, 6, '#556650');
+  S(-1, 7, 3, 3, '#aaccaa');
+  S(26,  7, 3, 3, '#aaccaa');
+
+  // Stitches across forehead and torso
+  for (let s = 0; s < 4; s++) {
+    S(7 + s*5, 1, 2, 3, '#2a4020');
+    S(8 + s*5, 1, 1, 1, '#aaccaa');
+  }
+  S(10, 14, 1, 8, '#2a4020');
+  S(12, 17, 4, 1, '#aaccaa');
+
+  // Lightning bolt scar
+  S(13, 2, 2, 3, '#ccff00');
+  S(12, 5, 2, 3, '#ccff00');
+  S(13, 8, 2, 2, '#ccff00');
+}
+
+// ── WEREWOLF LUCHADOR ──────────────────────────
+function drawRivalWerewolf(ox, oy) {
+  const x = Math.round(ox), y = Math.round(oy);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  drawRivalBase(ox, oy, {
+    cape: '#4a3018', capeHi: '#6a4828',
+    skin: '#8a7050', skinHi: '#aa9070', muscle: '#6a5038',
+    trunks: '#3a2810', waistband: '#c8880a',
+    glove: '#4a3018', gloveDark: '#2a1808',
+    maskBase: '#6a5038', maskBand: '#c8880a',
+    maskPanel: '#aa9070', eyeHole: '#1a0a00',
+    eyeGlow: '#ff8800', hornSide: '#4a3018', hornCenter: '#c8880a',
+    boot: '#3a2810', bootDark: '#1a1008',
+    chin: '#8a7050', nose: '#4a3018',
+  });
+
+  // Fur tufts on shoulders
+  for (let f = 0; f < 5; f++) {
+    S(-2+f*2, 9, 3, 5, '#6a5038');
+    S(22+f*2, 9, 3, 5, '#5a4028');
+  }
+  // Wolf snout (extends mask lower)
+  S(8, 11, 12, 5, '#6a5038');
+  S(9, 12, 10, 4, '#8a7050');
+  // Fangs
+  S(10, 15, 2, 3, '#f8f0e8');
+  S(16, 15, 2, 3, '#f8f0e8');
+  // Wolf ears on top of mask
+  S(5,  -8, 6, 6, '#6a5038');
+  S(17, -8, 6, 6, '#6a5038');
+  S(6,  -7, 4, 4, '#c87060');
+  S(18, -7, 4, 4, '#c87060');
+  // Claws on gloves
+  S(-1, 30, 2, 3, '#e8e0d0');
+  S( 2, 31, 2, 3, '#e8e0d0');
+  S(26, 30, 2, 3, '#e8e0d0');
+  S(29, 31, 2, 3, '#e8e0d0');
+  // Moon phase scar on chest
+  ctx.fillStyle = '#c8880a';
+  ctx.beginPath();
+  ctx.arc(x+14, y+18, 5, 0, Math.PI);
+  ctx.fill();
+}
+
+// ── WIZARD LUCHADOR ──────────────────────────
+function drawRivalWizard(ox, oy) {
+  const x = Math.round(ox), y = Math.round(oy);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  drawRivalBase(ox, oy, {
+    cape: '#1a0850', capeHi: '#2a1080',
+    skin: '#c8a890', skinHi: '#dcc0a8', muscle: '#a88870',
+    trunks: '#1a0850', waistband: '#8800cc',
+    glove: '#1a0850', gloveDark: '#0a0028',
+    maskBase: '#1a0850', maskBand: '#8800cc',
+    maskPanel: '#c8a890', eyeHole: '#08001a',
+    eyeGlow: '#cc00ff', hornSide: '#1a0850', hornCenter: '#8800cc',
+    boot: '#1a0850', bootDark: '#0a0028',
+    chin: '#c8a890', nose: '#a88870',
+  });
+
+  // Tall pointed wizard hat
+  // Hat brim
+  S(-4, -6, 36, 4, '#1a0850');
+  S(-3, -5, 34, 2, '#2a1080');
+  // Hat cone
+  S(5, -22, 18, 18, '#1a0850');
+  S(7, -22, 14, 18, '#220a60');
+  S(10,-24, 8, 6, '#1a0850');
+  S(12,-26, 4, 4, '#1a0850');
+  // Stars on hat
+  S(8,  -18, 3, 3, '#ffd700');
+  S(15, -15, 3, 3, '#cc00ff');
+  S(10, -12, 2, 2, '#00ccff');
+  S(17, -20, 2, 2, '#ffd700');
+  // Hat band
+  S(5, -8, 18, 3, '#8800cc');
+  // Magic staff (right hand extended)
+  S(29, -10, 3, 42, '#5a3010');
+  S(30, -10, 1, 40, '#8a5028');
+  // Staff orb
+  S(26,-16, 9, 9, '#8800cc');
+  S(28,-15, 5, 7, '#aa20ee');
+  S(29,-14, 3, 4, '#cc60ff');
+  // Orbiting sparkles
+  const orbAng = rivalFrame * 0.2;
+  const ox2 = x + 30 + Math.round(Math.cos(orbAng) * 7);
+  const oy2 = y - 12 + Math.round(Math.sin(orbAng) * 5);
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(ox2, oy2, 3, 3);
+  ctx.fillStyle = '#cc00ff';
+  ctx.fillRect(x+30+Math.round(Math.cos(orbAng+Math.PI)*7), y-12+Math.round(Math.sin(orbAng+Math.PI)*5), 2, 2);
+  // Magic robe hem trailing stars
+  S(4, 36, 20, 2, '#8800cc');
+  S(6, 38, 16, 2, '#8800cc');
+}
+
+// ── GHOST LUCHADOR ──────────────────────────
+function drawRivalGhost(ox, oy) {
+  const x = Math.round(ox), y = Math.round(oy);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  // Ghost floats — bob up and down
+  const floatY = Math.round(Math.sin(rivalFrame * 0.15) * 5);
+
+  // Translucent ethereal body — no base call, custom transparent look
+  ctx.save();
+  ctx.globalAlpha = 0.82 + Math.sin(rivalFrame * 0.1) * 0.12;
+
+  // Ghost sheet body
+  const gy = oy + floatY;
+  const gx = Math.round(ox);
+  const G = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(gx+dx, gy+dy, w, h); };
+
+  // Body sheet
+  G(2,  8, 24, 36, '#d8eef8');
+  G(1,  9, 26, 34, '#e8f4fc');
+  G(2,  8, 26,  4, '#f0f8ff'); // top highlight
+  // Rippled hem (wavy bottom)
+  const wave = Math.sin(rivalFrame * 0.25);
+  G(0,  42, 6, 4+Math.round(wave*2), '#d8eef8');
+  G(7,  43, 6, 3+Math.round(-wave*2), '#d8eef8');
+  G(14, 42, 6, 4+Math.round(wave*2), '#d8eef8');
+  G(21, 43, 6, 3+Math.round(-wave*2), '#d8eef8');
+  // Tapered bottom points
+  G(1,  44, 4, 5, '#c8e4f4');
+  G(8,  45, 4, 4, '#c8e4f4');
+  G(15, 44, 4, 5, '#c8e4f4');
+  G(22, 45, 4, 4, '#c8e4f4');
+
+  // Luchador mask outline (visible through sheet)
+  G(5,  0, 18, 13, 'rgba(180,210,240,0.9)'); // mask tint
+  G(5,  0, 18,  3, 'rgba(220,180,255,0.8)'); // purple band
+  // Eyes — hollow glowing
+  G(7,  5, 5, 4, '#0a0818');
+  G(16, 5, 5, 4, '#0a0818');
+  G(8,  6, 3, 2, '#8844ff');
+  G(17, 6, 3, 2, '#8844ff');
+  // Mask horns
+  G(8, -4, 4, 5, 'rgba(180,210,240,0.9)');
+  G(16,-4, 4, 5, 'rgba(180,210,240,0.9)');
+  G(12,-6, 4, 7, 'rgba(220,180,255,0.9)');
+
+  // Arms (ghostly wisps)
+  G(-2, 14, 6, 12, 'rgba(216,238,248,0.7)');
+  G(24, 14, 6, 12, 'rgba(216,238,248,0.7)');
+
+  // Ghost trail — fading duplicate behind
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#c8e0f8';
+  ctx.fillRect(gx - 6, gy + 4, 28, 38);
+
+  // Eerie glow halo
+  ctx.globalAlpha = 0.10;
+  const glow = ctx.createRadialGradient(gx+14, gy+24, 4, gx+14, gy+24, 28);
+  glow.addColorStop(0,   'rgba(180,160,255,0.8)');
+  glow.addColorStop(1,   'rgba(100,80,200,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(gx - 14, gy - 4, 56, 60);
+
+  ctx.restore();
+}
+
+function drawGround() {
+  // Tiled floor is drawn by drawTiles()
+  // Just ensure full coverage below tiles
+  ctx.fillStyle = '#6a3818';
+  ctx.fillRect(0, GROUND_Y + player.h, W, GROUND_H);
+}
+
+function drawTiles() {
+  const floorY = GROUND_Y + player.h;
+  const tileW = 40, tileH = 20;
+  const cols = Math.ceil(W / tileW) + 2;
+  const rows = Math.ceil(GROUND_H / tileH) + 1;
+  const offX = Math.round(tileOffset) % tileW;
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const tx = col * tileW - offX - tileW;
+      const ty = floorY + row * tileH;
+      const checker = (col + row) % 2 === 0;
+
+      // Tile base color (alternating terracotta shades)
+      ctx.fillStyle = checker ? '#c8784a' : '#b86838';
+      ctx.fillRect(tx, ty, tileW, tileH);
+
+      // Tile highlight (top-left corner)
+      ctx.fillStyle = checker ? '#d8906a' : '#c87848';
+      ctx.fillRect(tx + 1, ty + 1, tileW - 2, 3);
+      ctx.fillRect(tx + 1, ty + 1, 3, tileH - 2);
+
+      // Tile shadow (bottom-right)
+      ctx.fillStyle = checker ? '#a05830' : '#904828';
+      ctx.fillRect(tx, ty + tileH - 2, tileW, 2);
+      ctx.fillRect(tx + tileW - 2, ty, 2, tileH);
+
+      // Grout lines
+      ctx.fillStyle = '#6a3818';
+      ctx.fillRect(tx, ty, tileW, 1);
+      ctx.fillRect(tx, ty, 1, tileH);
+    }
+  }
+}
+
+function drawBackground() {
+  const wallH = GROUND_Y + player.h;
+
+  // Base stucco wall gradient — warm terracotta
+  const grad = ctx.createLinearGradient(0, 0, 0, wallH);
+  grad.addColorStop(0,   '#7a3a18');
+  grad.addColorStop(0.3, '#a05030');
+  grad.addColorStop(1,   '#c8784a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, wallH);
+
+  // Stucco texture — random dots/scratches baked in
+  stucco.forEach(s => {
+    ctx.fillStyle = s.c;
+    ctx.globalAlpha = 0.18;
+    ctx.fillRect(Math.round(s.x), Math.round(s.y), s.w, s.h);
+  });
+  ctx.globalAlpha = 1;
+
+  // Horizontal wall band / dado rail at mid-height
+  const dadoY = Math.round(wallH * 0.52);
+  ctx.fillStyle = '#8a4020';
+  ctx.fillRect(0, dadoY, W, 5);
+  ctx.fillStyle = '#b06040';
+  ctx.fillRect(0, dadoY + 5, W, wallH - dadoY - 5);
+
+  // Dado highlight line
+  ctx.fillStyle = '#d08050';
+  ctx.fillRect(0, dadoY - 2, W, 2);
+
+  // Baseboard at ground level
+  ctx.fillStyle = '#6a3010';
+  ctx.fillRect(0, wallH - 10, W, 10);
+  ctx.fillStyle = '#9a5030';
+  ctx.fillRect(0, wallH - 10, W, 2);
+}
+
+function drawEdisonBulbs() {
+  bulbs.forEach(b => {
+    b.flicker += b.flickerSpeed;
+    const glow = b.warmth * (0.88 + 0.12 * Math.sin(b.flicker));
+
+    // Light pool on wall (wide, soft, faint)
+    const poolGrad = ctx.createRadialGradient(b.x, 0, 0, b.x, 0, 110);
+    poolGrad.addColorStop(0,   `rgba(255,200,100,${0.13 * glow})`);
+    poolGrad.addColorStop(0.5, `rgba(255,160,60,${0.06 * glow})`);
+    poolGrad.addColorStop(1,   'rgba(255,140,40,0)');
+    ctx.fillStyle = poolGrad;
+    ctx.fillRect(b.x - 110, 0, 220, GROUND_Y + player.h);
+
+    // Floor pool beneath bulb
+    const floorY = GROUND_Y + player.h;
+    const floorGrad = ctx.createRadialGradient(b.x, floorY, 0, b.x, floorY, 80);
+    floorGrad.addColorStop(0,   `rgba(255,210,120,${0.18 * glow})`);
+    floorGrad.addColorStop(1,   'rgba(255,180,80,0)');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(b.x - 80, floorY - 10, 160, GROUND_H + 10);
+
+    // Cord from ceiling
+    ctx.fillStyle = '#4a2a10';
+    ctx.fillRect(Math.round(b.x) - 1, 0, 2, Math.round(b.cordLen));
+
+    // Bulb socket
+    ctx.fillStyle = '#5a3a18';
+    ctx.fillRect(Math.round(b.x) - 4, Math.round(b.cordLen), 8, 5);
+
+    // Bulb glass body (teardrop: circle + small rect)
+    const bulbY = b.cordLen + 5;
+    const bulbR = 7;
+    ctx.fillStyle = `rgba(255,${Math.round(210 * glow)},${Math.round(100 * glow)},${0.92 * glow})`;
+    ctx.beginPath();
+    ctx.arc(b.x, bulbY + bulbR, bulbR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bulb glow halo
+    const haloGrad = ctx.createRadialGradient(b.x, bulbY + bulbR, 0, b.x, bulbY + bulbR, 22);
+    haloGrad.addColorStop(0,   `rgba(255,220,120,${0.55 * glow})`);
+    haloGrad.addColorStop(0.4, `rgba(255,180,60,${0.25 * glow})`);
+    haloGrad.addColorStop(1,   'rgba(255,160,40,0)');
+    ctx.fillStyle = haloGrad;
+    ctx.beginPath();
+    ctx.arc(b.x, bulbY + bulbR, 22, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Filament (tiny bright line)
+    ctx.fillStyle = `rgba(255,255,200,${glow})`;
+    ctx.fillRect(Math.round(b.x) - 1, Math.round(bulbY) + 4, 2, 6);
+  });
+}
+
+function drawNeonSign() {
+  // Animate flicker
+  neonBuzzTimer--;
+  if (neonBuzzTimer <= 0) {
+    neonBuzz = Math.random() < 0.08 ? (0.3 + Math.random() * 0.4) : 1.0;
+    neonBuzzTimer = Math.random() < 0.08 ? (2 + Math.floor(Math.random() * 6)) : (20 + Math.floor(Math.random() * 40));
+  }
+  neonPhase += 0.04;
+  const pulse = neonBuzz * (0.92 + 0.08 * Math.sin(neonPhase));
+
+  // Sign position — upper-right wall area
+  const sx = W - 230, sy = 44;
+  const sw = 200, sh = 52;
+
+  // Sign backing board (dark box)
+  ctx.fillStyle = 'rgba(10,5,2,0.7)';
+  ctx.fillRect(sx - 6, sy - 6, sw + 12, sh + 12);
+  ctx.fillStyle = '#1a0808';
+  ctx.fillRect(sx - 4, sy - 4, sw + 8, sh + 8);
+
+  // Outer neon border glow
+  ctx.shadowColor = `rgba(255,60,120,${0.7 * pulse})`;
+  ctx.shadowBlur = 14 * pulse;
+  ctx.strokeStyle = `rgba(255,80,140,${0.9 * pulse})`;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(sx - 2, sy - 2, sw + 4, sh + 4);
+  ctx.shadowBlur = 0;
+
+  // Draw pixel "TACOS" letters using canvas text with neon glow
+  ctx.save();
+  ctx.font = 'bold 32px monospace';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+
+  // Letter colours: T=pink, A=cyan, C=yellow, O=green, S=pink
+  const letters = [
+    { ch: 'T', col: `rgba(255,80,160,${pulse})`,  glow: `rgba(255,60,140,${0.9*pulse})` },
+    { ch: 'A', col: `rgba(60,220,255,${pulse})`,  glow: `rgba(40,200,255,${0.9*pulse})` },
+    { ch: 'C', col: `rgba(255,220,40,${pulse})`,  glow: `rgba(255,200,20,${0.9*pulse})` },
+    { ch: 'O', col: `rgba(60,255,130,${pulse})`,  glow: `rgba(40,240,110,${0.9*pulse})` },
+    { ch: 'S', col: `rgba(255,80,160,${pulse})`,  glow: `rgba(255,60,140,${0.9*pulse})` },
+  ];
+
+  const letterW = 36;
+  const startX = sx + 8;
+  const letterY = sy + 8;
+
+  letters.forEach((l, i) => {
+    const lx = startX + i * letterW;
+    // Outer glow pass
+    ctx.shadowColor = l.glow;
+    ctx.shadowBlur = 18 * pulse;
+    ctx.fillStyle = l.glow;
+    ctx.fillText(l.ch, lx, letterY);
+    // Bright core
+    ctx.shadowBlur = 6 * pulse;
+    ctx.fillStyle = l.col;
+    ctx.fillText(l.ch, lx, letterY);
+  });
+
+  ctx.shadowBlur = 0;
+
+  // "TAQUERIA" subtitle in small dim neon below
+  ctx.font = '9px monospace';
+  ctx.fillStyle = `rgba(255,140,80,${0.6 * pulse})`;
+  ctx.shadowColor = `rgba(255,120,60,${0.5 * pulse})`;
+  ctx.shadowBlur = 6 * pulse;
+  ctx.fillText('★ TAQUERIA EL CAMPEON ★', sx + 8, sy + sh - 14);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawShelvesAndDecor() {
+  const COUNTER_TOP_Y  = 205;  // top surface of bar counter
+  const COUNTER_TOP_H  = 10;   // thickness of counter slab
+  const COUNTER_FRONT_H = GROUND_Y - COUNTER_TOP_Y - COUNTER_TOP_H; // panel to floor
+  const BACK_SHELF_Y   = 158;  // top of back bottle display shelf
+  const BACK_SHELF_H   = 6;
+  const MIRROR_Y       = 122;  // top of mirror behind back shelf
+  const MIRROR_H       = BACK_SHELF_Y - MIRROR_Y;
+  const off = shelfOffset % 90; // scroll offset for back shelf bottles
+
+  // ══ MIRROR BACKING (behind back shelf) ══
+  // Mirror outer frame
+  ctx.fillStyle = '#4a2208';
+  ctx.fillRect(0, MIRROR_Y - 3, W, MIRROR_H + 6);
+  // Mirror frame inner bevel
+  ctx.fillStyle = '#7a4a20';
+  ctx.fillRect(0, MIRROR_Y - 1, W, 2);
+  ctx.fillRect(0, MIRROR_Y + MIRROR_H - 1, W, 2);
+  // Mirror glass — dim reflective blue-grey tinted
+  ctx.fillStyle = '#1e2e38';
+  ctx.fillRect(0, MIRROR_Y, W, MIRROR_H);
+  // Mirror sheen — two diagonal highlight strips
+  ctx.fillStyle = 'rgba(200,220,240,0.07)';
+  ctx.fillRect(0, MIRROR_Y, W, 3);
+  ctx.fillStyle = 'rgba(200,220,240,0.04)';
+  for (let mx = -MIRROR_H; mx < W; mx += 80) {
+    ctx.save();
+    ctx.translate(mx, MIRROR_Y);
+    ctx.fillRect(0, 0, MIRROR_H * 0.6, MIRROR_H);
+    ctx.restore();
+  }
+  // Reflected glow from Edison bulbs (warm blobs in mirror)
+  ctx.fillStyle = 'rgba(255,180,80,0.06)';
+  for (let bx2 = 0; bx2 < W; bx2 += 140) {
+    ctx.fillRect(bx2 - 30, MIRROR_Y + 2, 60, MIRROR_H - 4);
+  }
+
+  // ══ BACKSPLASH AREA (between back shelf bottom and counter top) ══
+  const SPLASH_Y = BACK_SHELF_Y + BACK_SHELF_H; // 164
+  const SPLASH_H = COUNTER_TOP_Y - SPLASH_Y;    // 41px
+
+  // 1. Talavera tile base
+  drawTalavera(SPLASH_Y, SPLASH_H);
+
+  // 2. Chalkboard menu strip (top 12px of backsplash)
+  drawChalkboard(SPLASH_Y, 12);
+
+  // 3. Scrolling mask frames (below chalkboard, centred in remaining gap)
+  drawMaskFrames(SPLASH_Y + 13);
+
+  // ══ BACK SHELF PLANK (on the wall, above counter) ══
+  // Shadow beneath
+  ctx.fillStyle = '#2a0e04';
+  ctx.fillRect(0, BACK_SHELF_Y + BACK_SHELF_H, W, 5);
+  // Plank body — rich dark mahogany
+  ctx.fillStyle = '#5a2808';
+  ctx.fillRect(0, BACK_SHELF_Y, W, BACK_SHELF_H);
+  // Top highlight edge
+  ctx.fillStyle = '#9a5828';
+  ctx.fillRect(0, BACK_SHELF_Y, W, 2);
+  // Front lip
+  ctx.fillStyle = '#3a1604';
+  ctx.fillRect(0, BACK_SHELF_Y + BACK_SHELF_H - 2, W, 3);
+
+  // ══ SPIRIT BOTTLES on back shelf (scrolling) ══
+  const BOTTLE_ITEMS = [
+    'tequila', 'mezcal', 'rum', 'tequila_gold', 'whiskey', 'gin', 'tequila', 'rum'
+  ];
+  const BSPACING = 38;
+  const boff = shelfOffset % BSPACING;
+
+  for (let i = -1; i < Math.ceil(W / BSPACING) + 2; i++) {
+    const bx = Math.round(i * BSPACING - boff);
+    const btype = BOTTLE_ITEMS[((i + 1000) % BOTTLE_ITEMS.length)];
+    drawSpiritBottle(bx, BACK_SHELF_Y, btype);
+  }
+
+  // ══ COUNTER TOP ══
+  // Dark underside shadow
+  ctx.fillStyle = '#1a0804';
+  ctx.fillRect(0, COUNTER_TOP_Y + COUNTER_TOP_H, W, 4);
+  // Counter top surface — marble/granite look (dark with veins)
+  ctx.fillStyle = '#2a1810';
+  ctx.fillRect(0, COUNTER_TOP_Y, W, COUNTER_TOP_H);
+  // Marble surface tiles (lighter panels)
+  ctx.fillStyle = '#3a2218';
+  for (let tx = 0; tx < W; tx += 60) {
+    ctx.fillRect(tx + 1, COUNTER_TOP_Y + 1, 58, COUNTER_TOP_H - 2);
+  }
+  // Marble vein lines (light)
+  ctx.fillStyle = 'rgba(180,150,120,0.25)';
+  for (let tx = 0; tx < W; tx += 60) {
+    ctx.fillRect(tx + 12, COUNTER_TOP_Y + 3, 20, 1);
+    ctx.fillRect(tx + 30, COUNTER_TOP_Y + 6, 15, 1);
+  }
+  // Top highlight edge
+  ctx.fillStyle = '#6a4030';
+  ctx.fillRect(0, COUNTER_TOP_Y, W, 2);
+  // Tile grout lines
+  ctx.fillStyle = '#1a0a04';
+  for (let tx = 0; tx < W; tx += 60) {
+    ctx.fillRect(tx, COUNTER_TOP_Y, 1, COUNTER_TOP_H);
+  }
+
+  // ══ COUNTER FRONT PANEL ══
+  const panelY = COUNTER_TOP_Y + COUNTER_TOP_H;
+  // Panel base colour — dark stained wood
+  ctx.fillStyle = '#3a1a08';
+  ctx.fillRect(0, panelY, W, COUNTER_FRONT_H);
+  // Vertical wood panel boards
+  const PANEL_W = 40;
+  for (let px2 = 0; px2 < W; px2 += PANEL_W) {
+    // Panel face
+    ctx.fillStyle = '#4a2410';
+    ctx.fillRect(px2 + 1, panelY + 1, PANEL_W - 2, COUNTER_FRONT_H - 1);
+    // Panel highlight (left edge)
+    ctx.fillStyle = '#6a3820';
+    ctx.fillRect(px2 + 2, panelY + 1, 2, COUNTER_FRONT_H - 1);
+    // Panel shadow (right edge)
+    ctx.fillStyle = '#2a1008';
+    ctx.fillRect(px2 + PANEL_W - 3, panelY + 1, 2, COUNTER_FRONT_H - 1);
+    // Decorative inset groove
+    ctx.fillStyle = '#3a1a08';
+    ctx.fillRect(px2 + 6, panelY + 3, PANEL_W - 12, 1);
+    ctx.fillRect(px2 + 6, panelY + COUNTER_FRONT_H - 4, PANEL_W - 12, 1);
+  }
+  // Panel top moulding strip
+  ctx.fillStyle = '#5a2e18';
+  ctx.fillRect(0, panelY, W, 3);
+  ctx.fillStyle = '#7a4028';
+  ctx.fillRect(0, panelY, W, 1);
+  // Kickboard at floor
+  ctx.fillStyle = '#2a0e04';
+  ctx.fillRect(0, panelY + COUNTER_FRONT_H - 3, W, 3);
+
+  // ══ ITEMS ON COUNTER TOP (cactus, salsa jar, ashtray style) ══
+  const counterItems = ['cactus', 'jar', 'chili_string'];
+  const CSPACING = 200;
+  const coff = shelfOffset % CSPACING;
+  for (let i = -1; i < Math.ceil(W / CSPACING) + 2; i++) {
+    const cx3 = Math.round(i * CSPACING - coff + 40);
+    const ctype = counterItems[((i + 1000) % counterItems.length)];
+    if (ctype === 'cactus') drawMiniCactus(cx3, COUNTER_TOP_Y);
+    else if (ctype === 'jar') drawSalsaJar(cx3, COUNTER_TOP_Y);
+    else if (ctype === 'chili_string') drawChiliString(cx3, COUNTER_TOP_Y - 18);
+  }
+
+  // ══ HANGING CHILI GARLANDS (below counter top plank) ══
+  for (let gx = 100 - (shelfOffset % 200); gx < W + 20; gx += 200) {
+    const gxR = Math.round(gx);
+    ctx.fillStyle = '#4a2008';
+    for (let s = 0; s < 10; s++) {
+      const sx2 = gxR - 40 + s * 9;
+      const sy2 = COUNTER_TOP_Y + COUNTER_TOP_H + 2 + Math.sin(s / 9 * Math.PI) * 6;
+      ctx.fillRect(Math.round(sx2), Math.round(sy2), 1, 1);
+    }
+    for (let ci = 0; ci < 4; ci++) {
+      const cx2 = gxR - 30 + ci * 22;
+      const cy2 = COUNTER_TOP_Y + COUNTER_TOP_H + 4 + (ci % 2 === 0 ? 4 : 8);
+      ctx.fillStyle = '#cc1a00';
+      ctx.fillRect(cx2, cy2, 3, 9);
+      ctx.fillStyle = '#ff3a10';
+      ctx.fillRect(cx2 + 1, cy2 + 1, 1, 6);
+      ctx.fillStyle = '#2a8a10';
+      ctx.fillRect(cx2, cy2 - 3, 3, 4);
+    }
+  }
+
+  // ── Static luchador mask on wall (left side) ──
+  drawWallMask(maskFrame.x, maskFrame.y);
+}
+
+function drawSpiritBottle(x, shelfY, type) {
+  ctx.save();
+  ctx.globalAlpha = 1;
+  // Tall spirit bottle — bottom sits on shelfY
+  const configs = {
+    tequila:      { bh: 42, bw: 9,  body: '#c8e870', hi: '#e0ff90', cap: '#cc1a00', label: '#f5f0e0' },
+    tequila_gold: { bh: 44, bw: 8,  body: '#d4a820', hi: '#f0c840', cap: '#2a1808', label: '#f5e8c0' },
+    mezcal:       { bh: 46, bw: 10, body: '#a0784a', hi: '#c09060', cap: '#3a1a08', label: '#f0e8d8' },
+    rum:          { bh: 40, bw: 9,  body: '#8a3010', hi: '#b05030', cap: '#1a0808', label: '#f5e0c0' },
+    whiskey:      { bh: 43, bw: 11, body: '#b07830', hi: '#d09a50', cap: '#2a1808', label: '#f0e0c8' },
+    gin:          { bh: 45, bw: 8,  body: '#5080c0', hi: '#70a0e0', cap: '#f0f0f0', label: '#e8f0f8' },
+  };
+  const c   = configs[type] || configs.tequila;
+  const by  = shelfY - c.bh;
+  const bw  = c.bw;
+
+  // Bottle shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x + 2, by + 2, bw, c.bh);
+
+  // Reflected bottle in mirror (faint, above shelf) - use rgba to avoid globalAlpha bleed
+  ctx.fillStyle = 'rgba(120,160,120,0.10)';
+  ctx.fillRect(x + 1, by - 10, bw - 2, c.bh * 0.5);
+
+  // Body — widest part
+  ctx.fillStyle = c.body;
+  ctx.fillRect(x, by + 10, bw, c.bh - 10);
+  // Shoulder taper
+  ctx.fillRect(x + 1, by + 6,  bw - 2, 5);
+  ctx.fillRect(x + 2, by + 3,  bw - 4, 4);
+  // Neck
+  ctx.fillRect(x + 3, by - 2,  bw - 6, 6);
+  // Mouth
+  ctx.fillRect(x + 3, by - 5,  bw - 6, 4);
+
+  // Highlight on shoulder + body
+  ctx.fillStyle = c.hi;
+  ctx.fillRect(x + 1, by + 6,  2, c.bh - 8);
+
+  // Label (white rectangle mid-body)
+  ctx.fillStyle = c.label;
+  ctx.fillRect(x + 1, by + 14, bw - 2, 14);
+  // Label text lines
+  ctx.fillStyle = c.body;
+  ctx.fillRect(x + 2, by + 17, bw - 4, 2);
+  ctx.fillRect(x + 2, by + 21, bw - 4, 1);
+  ctx.fillRect(x + 3, by + 23, bw - 6, 1);
+
+  // Cap / cork
+  ctx.fillStyle = c.cap;
+  ctx.fillRect(x + 3, by - 8,  bw - 6, 4);
+  ctx.fillStyle = '#aaa';
+  ctx.fillRect(x + 3, by - 6,  bw - 6, 1);
+  ctx.restore();
+}
+
+function drawSauceBottle(x, y, bodyCol, highlightCol, label) {
+  // Bottle sits on shelf, bottom at y
+  const bh = 28, bw = 10;
+  const by = y - bh;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(x + 2, by + 2, bw, bh);
+
+  // Body
+  ctx.fillStyle = bodyCol;
+  ctx.fillRect(x, by + 8, bw, bh - 8);
+  // Shoulder taper
+  ctx.fillRect(x + 1, by + 4, bw - 2, 6);
+  ctx.fillRect(x + 2, by + 2, bw - 4, 4);
+  // Neck
+  ctx.fillRect(x + 3, by - 2, bw - 6, 5);
+  // Cap
+  ctx.fillStyle = '#dddddd';
+  ctx.fillRect(x + 2, by - 5, bw - 4, 4);
+
+  // Highlight
+  ctx.fillStyle = highlightCol;
+  ctx.fillRect(x + 1, by + 4, 2, bh - 6);
+
+  // Label (tiny white strip)
+  ctx.fillStyle = '#f5f0e8';
+  ctx.fillRect(x + 1, by + 11, bw - 2, 10);
+  ctx.fillStyle = bodyCol;
+  ctx.fillRect(x + 2, by + 13, bw - 4, 2);
+  ctx.fillRect(x + 2, by + 17, bw - 4, 1);
+}
+
+function drawChiliString(x, y) {
+  // Bunch of dried chilies hanging
+  const stem = '#3a1a08';
+  ctx.fillStyle = stem;
+  ctx.fillRect(x, y, 2, 6);
+
+  const chilis = [
+    {dx:-6, dy:5, len:14, col:'#aa1a00'},
+    {dx: 0, dy:3, len:18, col:'#cc2200'},
+    {dx: 6, dy:6, len:12, col:'#bb1800'},
+    {dx:-3, dy:10, len:16, col:'#dd2800'},
+  ];
+  chilis.forEach(c => {
+    ctx.fillStyle = c.col;
+    ctx.fillRect(x + c.dx, y + c.dy, 4, c.len);
+    ctx.fillStyle = '#2a7a08';
+    ctx.fillRect(x + c.dx, y + c.dy - 3, 4, 4);
+    // Highlight
+    ctx.fillStyle = '#ee4422';
+    ctx.fillRect(x + c.dx + 1, y + c.dy + 1, 1, c.len - 3);
+  });
+}
+
+function drawMiniCactus(x, y) {
+  ctx.save();
+  ctx.globalAlpha = 1;
+  // Terracotta pot
+  const py = y - 14;
+  ctx.fillStyle = '#8a4020';
+  ctx.fillRect(x + 2, py + 6, 18, 8);
+  ctx.fillRect(x + 1, py + 5, 20, 3);
+  ctx.fillRect(x + 3, py + 14, 16, 3);
+  // Soil
+  ctx.fillStyle = '#3a2010';
+  ctx.fillRect(x + 2, py + 5, 18, 3);
+  // Cactus body
+  ctx.fillStyle = '#1a6a10';
+  ctx.fillRect(x + 8, py - 14, 6, 20);
+  // Arms
+  ctx.fillRect(x + 2, py - 8, 7, 4);
+  ctx.fillRect(x + 2, py - 12, 4, 5);
+  ctx.fillRect(x + 13, py - 6, 7, 4);
+  ctx.fillRect(x + 15, py - 10, 4, 5);
+  // Spines
+  ctx.fillStyle = '#d4c880';
+  for (let s = 0; s < 4; s++) {
+    ctx.fillRect(x + 9 + s * 1, py - 13 + s * 4, 1, 2);
+  }
+  ctx.restore();
+}
+
+function drawSalsaJar(x, y) {
+  ctx.save();
+  ctx.globalAlpha = 1;
+  const jh = 22, jw = 16;
+  const jy = y - jh;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(x + 2, jy + 2, jw, jh);
+
+  // Glass jar body
+  ctx.fillStyle = 'rgba(180,220,160,0.7)';
+  ctx.fillRect(x, jy + 4, jw, jh - 4);
+  ctx.fillRect(x + 1, jy + 2, jw - 2, 4);
+  // Lid
+  ctx.fillStyle = '#cc4410';
+  ctx.fillRect(x + 1, jy - 3, jw - 2, 6);
+  ctx.fillStyle = '#aa2800';
+  ctx.fillRect(x + 1, jy - 3, jw - 2, 2);
+  // Salsa contents
+  ctx.fillStyle = 'rgba(200,60,20,0.7)';
+  ctx.fillRect(x + 2, jy + 8, jw - 4, jh - 12);
+  // Jar highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillRect(x + 2, jy + 4, 3, jh - 6);
+  // Label
+  ctx.fillStyle = '#f5e8d0';
+  ctx.fillRect(x + 2, jy + 9, jw - 4, 7);
+  ctx.fillStyle = '#cc4410';
+  ctx.fillRect(x + 3, jy + 11, jw - 6, 2);
+  ctx.restore();
+}
+
+function drawWallMask(x, y) {
+  // Decorative framed luchador mask hung on wall — static ornament
+  // Frame
+  ctx.fillStyle = '#5a2800';
+  ctx.fillRect(x - 4, y - 4, 40, 46);
+  ctx.fillStyle = '#8a4818';
+  ctx.fillRect(x - 2, y - 2, 36, 42);
+  ctx.fillStyle = '#c07830';
+  ctx.fillRect(x - 1, y - 1, 34, 2);
+  ctx.fillRect(x - 1, y - 1, 2, 40);
+
+  // Mask background inside frame
+  ctx.fillStyle = '#2a1008';
+  ctx.fillRect(x, y, 32, 38);
+
+  // Mask body (mini luchador mask, gold & red)
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx, y+dy, w, h); };
+  // Mask face
+  S(4, 4, 24, 28, '#cc1a1a');
+  // Gold forehead band
+  S(4, 4, 24, 5, '#ffcc00');
+  // White side panels
+  S(4, 9,  6, 16, '#f0f0f0');
+  S(22, 9, 6, 16, '#f0f0f0');
+  // Eye holes
+  S(7, 12, 6, 5, '#1a0000');
+  S(19, 12, 6, 5, '#1a0000');
+  // Eye glints
+  S(8, 13, 3, 3, '#ff4444');
+  S(20, 13, 3, 3, '#ff4444');
+  // Nose
+  S(14, 19, 4, 3, '#aa1400');
+  // Chin
+  S(6, 26, 20, 5, '#cc1a1a');
+  // Crown horns
+  S(8,  0, 5, 5, '#cc1a1a');
+  S(19, 0, 5, 5, '#cc1a1a');
+  S(14, -2, 4, 7, '#ffcc00');
+  // Hanging nail
+  ctx.fillStyle = '#888';
+  ctx.fillRect(x + 14, y - 6, 4, 4);
+}
+
+function drawPapelPicado() {
+
+  PAPEL_STRINGS.forEach((str, si) => {
+    const bannerW  = str.bannerW;
+    const bannerH  = str.bannerH;
+    const gap      = str.gap;
+    const step     = bannerW + gap;
+    const off      = papelOffset * str.speed % step;
+    const cols     = Math.ceil(W / step) + 3;
+
+    for (let i = -1; i < cols; i++) {
+      const bx = Math.round(i * step - off);
+
+      // ── Sagging string between banners ──
+      // Draw catenary curve from this banner top-center to next
+      const x1 = bx + bannerW / 2;
+      const x2 = bx + step + bannerW / 2;
+      const peakY  = str.y;
+      const valleyY = str.y + str.sag;
+      const steps = 12;
+      ctx.fillStyle = '#3a1a08';
+      for (let s = 0; s < steps; s++) {
+        const t1 = s / steps;
+        const t2 = (s + 1) / steps;
+        const mx1 = x1 + (x2 - x1) * t1;
+        const my1 = peakY + (valleyY - peakY) * Math.sin(t1 * Math.PI);
+        const mx2 = x1 + (x2 - x1) * t2;
+        const my2 = peakY + (valleyY - peakY) * Math.sin(t2 * Math.PI);
+        const midX = (mx1 + mx2) / 2;
+        const midY = (my1 + my2) / 2;
+        ctx.fillRect(Math.round(midX), Math.round(midY), 2, 1);
+      }
+
+      // Skip drawing banner outside canvas
+      if (bx + bannerW < -2 || bx > W + 2) continue;
+
+      // ── Banner triangle hanging from string ──
+      const colorIdx = ((i + si * 3 + 1000) % PAPEL_COLORS.length);
+      const col      = PAPEL_COLORS[colorIdx];
+      const patIdx   = ((i + si * 2 + 1000) % PAPEL_PATTERNS.length);
+      const pat      = PAPEL_PATTERNS[patIdx];
+
+      // Slight sway (oscillate gently)
+      const sway = Math.sin(frame * 0.025 + i * 1.3 + si * 0.7) * 1.5;
+      const topY = Math.round(str.y + (str.sag * 0.1));
+      const px   = Math.round(bx + sway);
+
+      // Banner body — triangle by stacking decreasing-width rows
+      for (let row = 0; row < bannerH; row++) {
+        const t    = row / bannerH;
+        const rowW = Math.round(bannerW * (1 - t * 0.55));
+        const rowX = px + Math.round((bannerW - rowW) / 2);
+        ctx.fillStyle = col;
+        ctx.fillRect(rowX, topY + row, rowW, 1);
+      }
+
+      // ── Cut-out patterns (darker holes in the banner) ──
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      const cx = px + Math.floor(bannerW / 2);
+      const cy = topY + Math.floor(bannerH * 0.38);
+
+      if (pat === 'diamond') {
+        const s = Math.floor(bannerW * 0.18);
+        ctx.fillRect(cx,     cy - s, 2, 2);
+        ctx.fillRect(cx - s, cy,     2, 2);
+        ctx.fillRect(cx,     cy + s, 2, 2);
+        ctx.fillRect(cx + s, cy,     2, 2);
+      } else if (pat === 'cross') {
+        const s = Math.floor(bannerW * 0.22);
+        ctx.fillRect(cx - s, cy - 1, s * 2, 2);
+        ctx.fillRect(cx - 1, cy - s, 2, s * 2);
+      } else if (pat === 'star') {
+        const s = Math.floor(bannerW * 0.2);
+        ctx.fillRect(cx - s, cy - 1, s * 2, 2);
+        ctx.fillRect(cx - 1, cy - s, 2, s * 2);
+        ctx.fillRect(cx - s + 2, cy - s + 2, 2, 2);
+        ctx.fillRect(cx + s - 4, cy - s + 2, 2, 2);
+        ctx.fillRect(cx - s + 2, cy + s - 4, 2, 2);
+        ctx.fillRect(cx + s - 4, cy + s - 4, 2, 2);
+      } else if (pat === 'zigzag') {
+        const s = Math.floor(bannerW * 0.18);
+        for (let z = -s; z < s; z += 3) {
+          ctx.fillRect(cx + z, cy + (z % 6 < 3 ? -2 : 0), 2, 2);
+        }
+      } else if (pat === 'circle') {
+        const r = Math.floor(bannerW * 0.18);
+        for (let a = 0; a < 8; a++) {
+          const ang = (a / 8) * Math.PI * 2;
+          ctx.fillRect(
+            Math.round(cx + Math.cos(ang) * r),
+            Math.round(cy + Math.sin(ang) * r),
+            2, 2
+          );
+        }
+      }
+
+      // ── Tiny highlight on left edge of banner ──
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.fillRect(px + 2, topY + 1, 2, Math.floor(bannerH * 0.5));
+    }
+  });
+}
+
+
+function drawFightPoster(x, y) {
+  // Weathered fight poster — "LUCHA GRANDE" cartel
+  const pw = 58, ph = 72;
+
+  // Aged paper background
+  ctx.fillStyle = '#2a1a08';
+  ctx.fillRect(x - 3, y - 3, pw + 6, ph + 6);
+  ctx.fillStyle = '#e8d4a0';
+  ctx.fillRect(x, y, pw, ph);
+  // Yellowed stain patches
+  ctx.fillStyle = '#d4b870';
+  ctx.fillRect(x + 4, y + 8,  18, 12);
+  ctx.fillRect(x + 36, y + 44, 14, 16);
+  ctx.fillStyle = '#c8a858';
+  ctx.fillRect(x + 2, y + 52, 10, 14);
+
+  // ── Header band ──
+  ctx.fillStyle = '#cc1a00';
+  ctx.fillRect(x, y, pw, 12);
+  ctx.fillStyle = '#ffdd00';
+  ctx.fillRect(x, y, pw, 3);
+  // "LUCHA" text (pixel letters)
+  ctx.fillStyle = '#ffdd00';
+  ctx.font = 'bold 7px monospace';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.fillText('LUCHA GRANDE', x + 3, y + 2);
+
+  // ── Pixel luchador figure centre of poster ──
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx, y+dy, w, h); };
+  // Body silhouette (mid-jump pose)
+  // Head/mask
+  S(21, 14, 16, 14, '#cc1a1a');
+  S(21, 14, 16,  4, '#ffcc00'); // gold forehead
+  S(21, 18,  4, 10, '#f0f0f0'); // white panel L
+  S(33, 18,  4, 10, '#f0f0f0'); // white panel R
+  S(24, 19,  4,  4, '#1a0000'); // eye L
+  S(30, 19,  4,  4, '#1a0000'); // eye R
+  S(24, 20,  2,  2, '#ff4040'); // eye glow L
+  S(30, 20,  2,  2, '#ff4040'); // eye glow R
+  S(24, 12,  4,  4, '#cc1a1a'); // horn L
+  S(30, 12,  4,  4, '#cc1a1a'); // horn R
+  S(27, 10,  4,  5, '#ffcc00'); // center horn gold
+  // Torso
+  S(23, 28, 12, 12, '#c8824a'); // skin
+  S(23, 28, 12,  2, '#d89060'); // shoulder hi
+  // Arms outstretched (jumping pose)
+  S(13, 28, 11,  4, '#c8824a'); // left arm
+  S(34, 28, 11,  4, '#c8824a'); // right arm
+  S(10, 27,  5,  6, '#cc1a1a'); // left glove
+  S(43, 27,  5,  6, '#cc1a1a'); // right glove
+  // Trunks
+  S(23, 40, 12,  8, '#cc1a1a');
+  S(23, 40, 12,  3, '#ffcc00'); // waistband
+  // Legs (split jump)
+  S(18, 48, 6, 10, '#c8824a');  // left leg
+  S(34, 48, 6, 10, '#c8824a');  // right leg
+  S(16, 56, 8,  5, '#cc1a1a');  // left boot
+  S(34, 56, 8,  5, '#cc1a1a');  // right boot
+  // Cape flaring out
+  S( 8, 26, 16, 18, '#cc1a00');
+  S(34, 26, 16, 18, '#cc1a00');
+  S( 9, 27,  6, 14, '#ee2222');
+  S(43, 27,  6, 14, '#ee2222');
+
+  // ── "VS" band ──
+  ctx.fillStyle = '#1a0a00';
+  ctx.fillRect(x, y + 62, pw, 2);
+
+  // ── Bottom info strip ──
+  ctx.fillStyle = '#1a0a00';
+  ctx.fillRect(x, y + 64, pw, 8);
+  ctx.fillStyle = '#ffdd00';
+  ctx.font = '5px monospace';
+  ctx.fillText('EL CAMPEON', x + 6, y + 65);
+
+  // Torn edge at bottom
+  ctx.fillStyle = '#2a1a08';
+  for (let tx = 0; tx < pw; tx += 6) {
+    ctx.fillRect(x + tx, y + ph - 2, 3, 3);
+  }
+
+  // Thumbtack corners
+  ctx.fillStyle = '#888';
+  ctx.fillRect(x - 1, y - 1, 3, 3);
+  ctx.fillRect(x + pw - 2, y - 1, 3, 3);
+  ctx.fillRect(x - 1, y + ph - 2, 3, 3);
+  ctx.fillRect(x + pw - 2, y + ph - 2, 3, 3);
+  ctx.fillStyle = '#ccc';
+  ctx.fillRect(x, y, 1, 1);
+  ctx.fillRect(x + pw - 1, y, 1, 1);
+  ctx.fillRect(x, y + ph - 1, 1, 1);
+  ctx.fillRect(x + pw - 1, y + ph - 1, 1, 1);
+}
+
+function drawBullSkull(x, y) {
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx, y+dy, w, h); };
+
+  // Mount plaque (dark wood oval backing)
+  ctx.fillStyle = '#3a1a08';
+  ctx.fillRect(x - 2, y + 2, 52, 40);
+  ctx.fillStyle = '#5a2e10';
+  ctx.fillRect(x, y, 48, 38);
+  ctx.fillStyle = '#7a4020';
+  ctx.fillRect(x + 1, y, 46, 2);
+  ctx.fillRect(x, y + 1, 2, 36);
+
+  // Hanging nail
+  ctx.fillStyle = '#999';
+  ctx.fillRect(x + 22, y - 4, 4, 5);
+  ctx.fillStyle = '#ccc';
+  ctx.fillRect(x + 23, y - 4, 2, 2);
+
+  // ── Skull ──
+  // Main cranium
+  S(10, 6, 28, 20, '#e8e0d0');
+  S(11, 5, 26, 22, '#e8e0d0');
+  S(12, 4, 24, 24, '#ddd8c8');
+  // Skull highlight
+  S(13, 5,  8,  6, '#f5f0e8');
+  // Eye sockets (dark hollow)
+  S(12, 12,  8,  8, '#2a1a08');
+  S(28, 12,  8,  8, '#2a1a08');
+  S(13, 13,  6,  6, '#1a0a00');
+  S(29, 13,  6,  6, '#1a0a00');
+  // Nasal cavity
+  S(21, 18,  6,  6, '#2a1a08');
+  S(22, 19,  4,  5, '#1a0a00');
+  // Jaw / teeth row
+  S(10, 24, 28,  6, '#ddd8c8');
+  S(11, 25, 26,  5, '#e8e0d0');
+  // Teeth gaps
+  for (let t = 0; t < 5; t++) {
+    S(12 + t * 5, 25, 2, 5, '#2a1a08');
+  }
+  // Crack details
+  S(20, 6,  1, 8, '#c8c0b0');
+  S(32, 10, 1, 6, '#c8c0b0');
+
+  // ── Longhorns ──
+  // Left horn — sweeps up and left
+  const hornSegsL = [
+    {dx:-2, dy:8,  w:6, h:3},
+    {dx:-6, dy:5,  w:6, h:3},
+    {dx:-10,dy:2,  w:6, h:3},
+    {dx:-13,dy:-1, w:5, h:3},
+    {dx:-15,dy:-4, w:4, h:3},
+    {dx:-16,dy:-7, w:3, h:3},
+    {dx:-16,dy:-10,w:3, h:3},
+  ];
+  const hornSegsR = [
+    {dx:44, dy:8,  w:6, h:3},
+    {dx:48, dy:5,  w:6, h:3},
+    {dx:52, dy:2,  w:6, h:3},
+    {dx:55, dy:-1, w:5, h:3},
+    {dx:57, dy:-4, w:4, h:3},
+    {dx:58, dy:-7, w:3, h:3},
+    {dx:58, dy:-10,w:3, h:3},
+  ];
+  hornSegsL.forEach(s => { S(s.dx, s.dy, s.w, s.h, '#d4c890'); });
+  hornSegsR.forEach(s => { S(s.dx, s.dy, s.w, s.h, '#d4c890'); });
+  // Horn highlights
+  hornSegsL.forEach(s => { S(s.dx+1, s.dy, 1, s.h-1, '#e8dca8'); });
+  hornSegsR.forEach(s => { S(s.dx+1, s.dy, 1, s.h-1, '#e8dca8'); });
+  // Horn tips
+  S(-16, -13, 2, 3, '#b8aa70');
+  S( 59, -13, 2, 3, '#b8aa70');
+}
+
+function drawWallClock(x, y) {
+  const r = 18; // clock radius in pixels
+  const cx = x + r, cy = y + r;
+
+  // Clock outer rim (dark wood)
+  ctx.fillStyle = '#3a1a08';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 3, 0, Math.PI * 2);
+  ctx.fill();
+  // Clock face bezel
+  ctx.fillStyle = '#7a4a20';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 1, 0, Math.PI * 2);
+  ctx.fill();
+  // Clock face (cream)
+  ctx.fillStyle = '#f5f0e0';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Hour markers (12 dots)
+  for (let m = 0; m < 12; m++) {
+    const ang = (m / 12) * Math.PI * 2 - Math.PI / 2;
+    const mr = r - 4;
+    const mx = cx + Math.cos(ang) * mr;
+    const my = cy + Math.sin(ang) * mr;
+    ctx.fillStyle = '#3a1a08';
+    ctx.fillRect(Math.round(mx) - 1, Math.round(my) - 1, 2, 2);
+  }
+
+  // Real time hands
+  const h = clockTime.getHours() % 12;
+  const min = clockTime.getMinutes();
+  const sec = clockTime.getSeconds();
+
+  const hourAng   = ((h + min / 60) / 12) * Math.PI * 2 - Math.PI / 2;
+  const minAng    = ((min + sec / 60) / 60) * Math.PI * 2 - Math.PI / 2;
+  const secAng    = (sec / 60) * Math.PI * 2 - Math.PI / 2;
+
+  // Hour hand (short, thick)
+  const hLen = r * 0.55;
+  ctx.fillStyle = '#1a0a00';
+  ctx.fillRect(
+    Math.round(cx + Math.cos(hourAng) * hLen * 0.1) - 1,
+    Math.round(cy + Math.sin(hourAng) * hLen * 0.1) - 1,
+    Math.round(Math.cos(hourAng) * hLen) + 2,
+    2
+  );
+  // Draw hour hand properly as line of pixels
+  for (let i = 0; i < hLen; i++) {
+    ctx.fillRect(
+      Math.round(cx + Math.cos(hourAng) * i) - 1,
+      Math.round(cy + Math.sin(hourAng) * i) - 1,
+      2, 2
+    );
+  }
+
+  // Minute hand (longer, thinner)
+  const mLen = r * 0.78;
+  ctx.fillStyle = '#1a0a00';
+  for (let i = 0; i < mLen; i++) {
+    ctx.fillRect(
+      Math.round(cx + Math.cos(minAng) * i),
+      Math.round(cy + Math.sin(minAng) * i),
+      1, 1
+    );
+  }
+
+  // Second hand (red, thin)
+  const sLen = r * 0.82;
+  ctx.fillStyle = '#cc1a00';
+  for (let i = 2; i < sLen; i++) {
+    ctx.fillRect(
+      Math.round(cx + Math.cos(secAng) * i),
+      Math.round(cy + Math.sin(secAng) * i),
+      1, 1
+    );
+  }
+
+  // Centre pin
+  ctx.fillStyle = '#cc1a00';
+  ctx.fillRect(cx - 2, cy - 2, 4, 4);
+  ctx.fillStyle = '#ff4422';
+  ctx.fillRect(cx - 1, cy - 1, 2, 2);
+
+  // Hanging nail
+  ctx.fillStyle = '#888';
+  ctx.fillRect(cx - 1, y - 4, 3, 5);
+}
+
+
+function drawWallArt() {
+  // Fight poster — left wall between mask frame and neon sign
+  drawFightPoster(150, 44);
+
+  // Bull skull — center wall, above shelf
+  drawBullSkull(360, 44);
+
+  // Clock — right of bull skull
+  drawWallClock(490, 44);
+
+}
+
+
+function drawCeilingFan() {
+  const cx = FAN_X, cy = FAN_Y;
+  const BLADE_COUNT = 4;
+  const BLADE_LEN   = 36;
+  const BLADE_W     = 10;
+
+  // Drop shadow on floor — rotating ellipse sweep
+  const floorY = GROUND_Y + player.h;
+  const shadowAlpha = 0.10;
+  ctx.save();
+  ctx.globalAlpha = shadowAlpha;
+  ctx.fillStyle = '#1a0800';
+  for (let b = 0; b < BLADE_COUNT; b++) {
+    const ang = fanAngle + (b / BLADE_COUNT) * Math.PI * 2;
+    const sx  = cx + Math.cos(ang) * BLADE_LEN * 0.8;
+    const sw  = BLADE_LEN * 1.2;
+    ctx.save();
+    ctx.translate(cx, floorY);
+    ctx.scale(1, 0.18); // flatten to ellipse
+    ctx.rotate(ang);
+    ctx.fillRect(-sw / 2, -BLADE_W / 2, sw, BLADE_W);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // Ceiling mount rod
+  ctx.fillStyle = '#3a1a08';
+  ctx.fillRect(cx - 3, cy, 6, 18);
+  ctx.fillStyle = '#5a2a10';
+  ctx.fillRect(cx - 2, cy, 4, 16);
+
+  // Motor housing (cylindrical)
+  ctx.fillStyle = '#4a2808';
+  ctx.fillRect(cx - 12, cy + 14, 24, 14);
+  ctx.fillStyle = '#6a3a18';
+  ctx.fillRect(cx - 11, cy + 14, 22, 4);
+  ctx.fillStyle = '#3a1808';
+  ctx.fillRect(cx - 12, cy + 24, 24, 4);
+
+  // Blades — squished vertically to look horizontal (viewed from below)
+  for (let b = 0; b < BLADE_COUNT; b++) {
+    const ang = fanAngle + (b / BLADE_COUNT) * Math.PI * 2;
+    ctx.save();
+    ctx.translate(cx, cy + 21);
+    ctx.scale(1, 0.22); // foreshorten: makes blades look flat/horizontal
+    ctx.rotate(ang);
+
+    // Blade shadow
+    ctx.fillStyle = 'rgba(30,10,0,0.5)';
+    ctx.fillRect(4, -BLADE_W / 2 + 2, BLADE_LEN, BLADE_W);
+
+    // Blade body — warm wood tone
+    const bladeGrad = ctx.createLinearGradient(4, 0, 4 + BLADE_LEN, 0);
+    bladeGrad.addColorStop(0,   '#8a4a18');
+    bladeGrad.addColorStop(0.4, '#b06830');
+    bladeGrad.addColorStop(1,   '#7a3a10');
+    ctx.fillStyle = bladeGrad;
+    ctx.fillRect(4, -BLADE_W / 2, BLADE_LEN, BLADE_W);
+
+    // Blade highlight strip
+    ctx.fillStyle = 'rgba(200,140,80,0.45)';
+    ctx.fillRect(6, -BLADE_W / 2 + 1, BLADE_LEN - 4, 2);
+
+    ctx.restore();
+  }
+
+  // Centre cap over motor
+  ctx.fillStyle = '#5a3010';
+  ctx.beginPath();
+  ctx.arc(cx, cy + 21, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#8a5030';
+  ctx.beginPath();
+  ctx.arc(cx, cy + 21, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#aa7040';
+  ctx.fillRect(cx - 2, cy + 19, 4, 4);
+}
+
+function drawPinata() {
+  const px = PINATA_PIVOT.x;
+  const py = PINATA_PIVOT.y;
+
+  // Pendulum tip (where rooster hangs from)
+  const bx = px + Math.sin(pinataAngle) * PINATA_ROPE;
+  const by = py + Math.cos(pinataAngle) * PINATA_ROPE;
+
+  // Rope from ceiling
+  const SEGS = 8;
+  for (let s = 0; s < SEGS; s++) {
+    const t1 = s / SEGS, t2 = (s + 1) / SEGS;
+    const rx1 = px + (bx - px) * t1;
+    const ry1 = py + (by - py) * t1 + Math.sin(t1 * Math.PI) * 3;
+    const rx2 = px + (bx - px) * t2;
+    const ry2 = py + (by - py) * t2 + Math.sin(t2 * Math.PI) * 3;
+    ctx.fillStyle = '#3a1a08';
+    ctx.fillRect(Math.round((rx1+rx2)/2), Math.round((ry1+ry2)/2), 2, 2);
+  }
+
+  // ── Pixel Gallo (Fighting Rooster) ──
+  ctx.save();
+  ctx.translate(Math.round(bx), Math.round(by));
+  ctx.rotate(pinataAngle * 0.4); // gentle sway tilt
+
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(dx,dy,w,h); };
+
+  // ── TAIL FEATHERS — long sweeping teal/dark green arcs ──
+  // Main tail mass
+  S(-30, -8,  14, 6,  '#1a5a50'); // far tail base
+  S(-34, -10, 10, 5,  '#0f4a40');
+  // Long individual feathers fanning out
+  const tailFeathers = [
+    { x:-38, y:-14, w:5, h:20, c:'#1a6a58' },
+    { x:-34, y:-18, w:4, h:22, c:'#206858' },
+    { x:-30, y:-20, w:4, h:20, c:'#1a7860' },
+    { x:-26, y:-18, w:4, h:18, c:'#248a68' },
+    { x:-22, y:-14, w:4, h:14, c:'#1a6a50' },
+  ];
+  tailFeathers.forEach(f => S(f.x, f.y, f.w, f.h, f.c));
+  // Feather highlights (iridescent shimmer)
+  S(-37, -13, 2, 14, '#3a9878');
+  S(-33, -16, 2, 16, '#30a870');
+  S(-29, -18, 1, 14, '#38b878');
+  // White fluffy undertail tuft
+  S(-24, -4, 8, 6, '#e8e8e8');
+  S(-22, -6, 6, 4, '#f4f4f4');
+  S(-20, -4, 4, 5, '#ffffff');
+
+  // ── BODY — rust brown with blue wing panel ──
+  // Main body shape
+  S(-18, -8, 22, 18, '#8a3a10'); // rust brown body
+  S(-16, -6, 20, 14, '#a04a18'); // body highlight
+  // Blue wing panel (iridescent)
+  S(-14, -4, 16, 10, '#2a60a8'); // blue wing
+  S(-12, -3, 14, 7,  '#3a78c0'); // wing highlight
+  S(-12, -3, 4,  6,  '#4a90d8'); // bright wing sheen
+  // Wing shadow at bottom
+  S(-14,  5, 16, 4,  '#1a3a78');
+  // Brown saddle feathers over wing top
+  S(-10, -8, 10, 5,  '#7a3010');
+  S(-8,  -9, 8,  4,  '#6a2808');
+
+  // ── BREAST / CHEST — golden cream ──
+  S(2,  -10, 10, 20, '#d4a830'); // golden chest
+  S(3,   -9, 8,  18, '#e8c050'); // chest highlight
+  S(3,   -9, 3,  14, '#f0d070'); // bright sheen stripe
+  // Breast feather texture lines
+  S(4,   -5, 6,  1,  '#c09828');
+  S(4,    0, 6,  1,  '#c09828');
+  S(4,    5, 6,  1,  '#c09828');
+
+  // ── NECK / HACKLE FEATHERS — cream/gold flowing down ──
+  S(4,  -18, 8, 10, '#e8d060'); // hackle base
+  S(6,  -20, 6,  8, '#f0e070');
+  // Individual hackle strands
+  S(5,  -21, 2, 12, '#f4e878');
+  S(8,  -21, 2, 12, '#ead858');
+  S(11, -19, 2, 10, '#dcc848');
+
+  // ── HEAD ──
+  // Head shape
+  S(10, -26, 10, 12, '#d4a830'); // golden head
+  S(11, -25, 8,  10, '#e8c050');
+  // Red comb (multi-lobed)
+  S(12, -32, 4,  7,  '#cc1a00');
+  S(15, -33, 4,  8,  '#dd2000');
+  S(18, -31, 3,  6,  '#cc1a00');
+  S(13, -33, 2,  2,  '#ff4422'); // comb highlights
+  S(16, -34, 2,  2,  '#ff4422');
+  // Red wattle under beak
+  S(17, -20, 4,  6,  '#cc1a00');
+  S(18, -19, 3,  5,  '#ee2a10');
+  // Eye
+  S(17, -24, 4,  4,  '#1a0a00');
+  S(18, -23, 2,  2,  '#ff8800'); // orange iris
+  S(18, -23, 1,  1,  '#1a0a00'); // pupil
+  // Beak
+  S(20, -24, 6,  3,  '#d4a020'); // upper beak
+  S(20, -22, 5,  3,  '#b88818'); // lower beak
+  S(22, -23, 2,  1,  '#e8c040'); // beak highlight
+
+  // ── LEGS & FEET ──
+  // Thighs (feathered)
+  S(0,  8,  8,  6,  '#a04a18');
+  S(6,  8,  6,  6,  '#8a3a10');
+  // Shanks (yellow scaly)
+  S(1,  12, 4, 10,  '#c8a020');
+  S(8,  12, 4, 10,  '#c8a020');
+  S(2,  13, 2,  8,  '#dab830'); // shank highlight
+  S(9,  13, 2,  8,  '#dab830');
+  // Toes
+  S(-2, 21, 8,  2,  '#c8a020'); // left foot spread
+  S(1,  22, 2,  4,  '#b89018');
+  S(4,  22, 2,  3,  '#b89018');
+  S(7,  22, 2,  3,  '#b89018');
+  S(8,  21, 8,  2,  '#c8a020'); // right foot spread
+  S(9,  22, 2,  4,  '#b89018');
+  S(12, 22, 2,  3,  '#b89018');
+  S(15, 22, 2,  3,  '#b89018');
+  // Spurs
+  S(0,  18, 3,  2,  '#d4b020');
+  S(9,  18, 3,  2,  '#d4b020');
+
+  // String loop at top of back
+  S(-2, -10, 4, 3, '#3a1a08');
+
+  ctx.restore();
+}
+
+
+function drawTalavera(y, h) {
+  // Classic Talavera-style backsplash — blue & white tile pattern
+  const TW = 20, TH = 20; // tile size
+  const cols = Math.ceil(W / TW) + 1;
+  const rows = Math.ceil(h / TH) + 1;
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const tx = col * TW;
+      const ty = y + row * TH;
+      if (ty + TH > y + h) continue; // clip to area
+
+      const checker = (col + row) % 2 === 0;
+
+      // Tile base
+      ctx.fillStyle = checker ? '#dceaf8' : '#f8f4ec';
+      ctx.fillRect(tx, ty, TW, TH);
+
+      // Grout lines
+      ctx.fillStyle = '#b8ccd8';
+      ctx.fillRect(tx, ty, TW, 1);
+      ctx.fillRect(tx, ty, 1, TH);
+
+      if (checker) {
+        // Blue tile — decorative cross motif
+        ctx.fillStyle = '#2a6aaa';
+        // Border frame inside tile
+        ctx.fillRect(tx + 2, ty + 2, TW - 4, 2);
+        ctx.fillRect(tx + 2, ty + TH - 4, TW - 4, 2);
+        ctx.fillRect(tx + 2, ty + 2, 2, TH - 4);
+        ctx.fillRect(tx + TW - 4, ty + 2, 2, TH - 4);
+        // Centre cross
+        ctx.fillRect(tx + 9, ty + 4, 2, TH - 8);
+        ctx.fillRect(tx + 4, ty + 9, TW - 8, 2);
+        // Corner dots
+        ctx.fillStyle = '#4a8acc';
+        ctx.fillRect(tx + 4, ty + 4, 2, 2);
+        ctx.fillRect(tx + TW - 6, ty + 4, 2, 2);
+        ctx.fillRect(tx + 4, ty + TH - 6, 2, 2);
+        ctx.fillRect(tx + TW - 6, ty + TH - 6, 2, 2);
+      } else {
+        // White tile — subtle floral accent
+        ctx.fillStyle = '#c8dae8';
+        ctx.fillRect(tx + 8, ty + 3, 4, 14); // vertical petal
+        ctx.fillRect(tx + 3, ty + 8, 14, 4); // horizontal petal
+        ctx.fillStyle = '#a0b8cc';
+        ctx.fillRect(tx + 9, ty + 9, 2, 2); // centre dot
+      }
+    }
+  }
+
+  // Thin border strips top and bottom
+  ctx.fillStyle = '#2a6aaa';
+  ctx.fillRect(0, y, W, 2);
+  ctx.fillRect(0, y + h - 2, W, 2);
+}
+
+function drawChalkboard(y, h) {
+  // Dark chalkboard strip with menu text
+  ctx.fillStyle = '#1a2a18';
+  ctx.fillRect(0, y, W, h);
+  // Chalk dust texture
+  ctx.fillStyle = 'rgba(240,240,220,0.04)';
+  for (let cx2 = 0; cx2 < W; cx2 += 7) {
+    ctx.fillRect(cx2, y + 1, 3, h - 2);
+  }
+  // Wooden frame top & bottom
+  ctx.fillStyle = '#5a3010';
+  ctx.fillRect(0, y, W, 2);
+  ctx.fillRect(0, y + h - 2, W, 2);
+  ctx.fillStyle = '#7a4820';
+  ctx.fillRect(0, y, W, 1);
+
+  // Menu text — draw as pixel-style chalk writing
+  ctx.save();
+  ctx.font = 'bold 8px monospace';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+
+  // Chalk white text with slight roughness (draw twice offset for chalk feel)
+  const menuText = '🌮 TACOS $3  •  TEQUILA $5  •  CERVEZA $4  •  ELOTE $2  •  AGUA FRESCA $2  •  TACOS $3  •  TEQUILA $5  •  CERVEZA $4  •  ELOTE $2  •  AGUA FRESCA $2';
+
+  // Scrolling text offset
+  const textOff = (shelfOffset * 0.3) % 520;
+
+  ctx.fillStyle = 'rgba(200,200,180,0.25)';
+  ctx.fillText(menuText, -textOff + 1, y + 3);
+  ctx.fillStyle = 'rgba(240,235,210,0.9)';
+  ctx.fillText(menuText, -textOff, y + 2);
+
+  // Decorative chalk flourishes
+  ctx.fillStyle = 'rgba(240,235,210,0.5)';
+  ctx.font = '6px monospace';
+  ctx.fillText('✦', 4, y + 2);
+  ctx.fillText('✦', W - 12, y + 2);
+  ctx.restore();
+}
+
+function drawMaskFrames(y) {
+  // Row of small framed luchador masks scrolling past
+  const MSPACING = 70;
+  const moff = shelfOffset % MSPACING;
+  const maskColors = [
+    { main: '#cc1a1a', band: '#ffcc00', panel: '#f0f0f0' }, // red/gold
+    { main: '#1a44cc', band: '#ffcc00', panel: '#f0f0f0' }, // blue/gold
+    { main: '#2a8a20', band: '#ff4422', panel: '#f0f0f0' }, // green/red
+    { main: '#8a1acc', band: '#ffcc00', panel: '#ffffff' }, // purple/gold
+    { main: '#cc6a10', band: '#ffffff', panel: '#ffcc00' }, // orange/white
+  ];
+
+  for (let i = -1; i < Math.ceil(W / MSPACING) + 2; i++) {
+    const mx = Math.round(i * MSPACING - moff);
+    const mc = maskColors[((i + 1000) % maskColors.length)];
+    ctx.save();
+    ctx.globalAlpha = 1;
+    drawScrollMask(mx, y, mc);
+    ctx.restore();
+  }
+}
+
+function drawScrollMask(x, y, mc) {
+  const fw = 30, fh = 30; // frame dims
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx, y+dy, w, h); };
+
+  // Frame outer shadow
+  ctx.fillStyle = '#1a0808';
+  ctx.fillRect(x + 2, y + 2, fw, fh);
+
+  // Frame wood
+  ctx.fillStyle = '#5a2808';
+  ctx.fillRect(x, y, fw, fh);
+  ctx.fillStyle = '#7a4018';
+  ctx.fillRect(x + 1, y + 1, fw - 2, fh - 2);
+  // Frame inner bevel
+  ctx.fillStyle = '#3a1408';
+  ctx.fillRect(x + 3, y + 3, fw - 6, fh - 6);
+
+  // Mask background
+  S(4, 4, fw - 8, fh - 8, '#1a0808');
+
+  // Scale all mask drawing into the inner frame (22×22 area at x+4, y+4)
+  const mx = x + 4, my = y + 4;
+  const mw = fw - 8, mh = fh - 8; // 22×22
+  const M = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(mx+dx, my+dy, w, h); };
+
+  // Mask face
+  M(1, 2, mw-2, mh-4, mc.main);
+  // Forehead band
+  M(1, 2, mw-2, 4, mc.band);
+  // Side panels
+  M(1, 6, 4, mh-10, mc.panel);
+  M(mw-5, 6, 4, mh-10, mc.panel);
+  // Eye holes
+  M(3, 8, 5, 4, '#0a0000');
+  M(mw-8, 8, 5, 4, '#0a0000');
+  // Eye glow
+  M(4, 9, 2, 2, '#ff4040');
+  M(mw-7, 9, 2, 2, '#ff4040');
+  // Nose
+  M(mw/2-1, 13, 3, 2, '#88200a');
+  // Chin
+  M(3, mh-7, mw-6, 4, mc.main);
+  // Crown horns
+  M(3, 0, 4, 3, mc.main);
+  M(mw-7, 0, 4, 3, mc.main);
+  M(mw/2-2, -2, 4, 4, mc.band);
+
+  // Hanging nail
+  ctx.fillStyle = '#999';
+  ctx.fillRect(x + fw/2 - 1, y - 3, 3, 4);
+}
+
+function drawCollectibles() {
+  collectibles.forEach(c => {
+    const bobY = Math.sin(c.bob) * 3; // floating bob
+    ctx.save();
+    ctx.globalAlpha = 1;
+    if (c.type === 'belt') {
+      drawChampBelt(Math.round(c.x), Math.round(c.y + bobY));
+    } else if (c.type === 'chile') {
+      drawGoldenChile(Math.round(c.x), Math.round(c.y + bobY));
+    } else if (c.type === 'chili_pepper') {
+      drawRedChiliPepper(Math.round(c.x), Math.round(c.y + bobY));
+    } else {
+      drawTacoItem(Math.round(c.x), Math.round(c.y + bobY));
+    }
+    // Glow halo beneath
+    const glowCol = c.type === 'belt' ? 'rgba(255,204,0,0.25)' : 'rgba(255,140,0,0.2)';
+    ctx.fillStyle = glowCol;
+    ctx.beginPath();
+    ctx.ellipse(c.x + c.w/2, c.y + c.h + bobY + 4, c.w * 0.7, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawChampBelt(x, y) {
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  // Belt strap (brown leather)
+  S(0,  4, 28, 8, '#6a3010');
+  S(0,  5, 28, 6, '#8a4820');
+  S(1,  6, 26, 4, '#a05a28'); // leather highlight
+  // Strap holes
+  ctx.fillStyle = '#3a1808';
+  for (let h2 = 0; h2 < 3; h2++) { ctx.fillRect(x + 22 + h2*2, y + 7, 1, 2); }
+
+  // Centre plate (big gold buckle)
+  S(6,  0, 16, 16, '#8a6800'); // plate shadow
+  S(5,  -1, 16, 16, '#cc9900'); // plate body
+  S(5,  -1, 16, 3,  '#ffdd00'); // plate top highlight
+  S(5,  -1, 3,  16, '#ffdd00'); // plate left highlight
+  S(6,  0,  14, 13, '#ddaa00'); // plate face
+
+  // Centre plate design — luchador mask motif
+  S(9,  2,  8,  8,  '#cc1a00'); // red mask on plate
+  S(9,  2,  8,  2,  '#ffcc00'); // gold forehead band
+  S(9,  4,  2,  6,  '#f0f0f0'); // white panel L
+  S(15, 4,  2,  6,  '#f0f0f0'); // white panel R
+  S(10, 5,  2,  3,  '#1a0000'); // eye L
+  S(14, 5,  2,  3,  '#1a0000'); // eye R
+  S(12, 1,  2,  3,  '#ffcc00'); // top horn
+
+  // Plate border studs
+  S(5,  -1, 2, 2, '#ffee88');
+  S(19, -1, 2, 2, '#ffee88');
+  S(5,  13, 2, 2, '#ffee88');
+  S(19, 13, 2, 2, '#ffee88');
+
+  // Side plates (smaller gold plates)
+  S(0,  2,  6, 10, '#bb8800');
+  S(0,  2,  6, 3,  '#ddaa00');
+  S(22, 2,  6, 10, '#bb8800');
+  S(22, 2,  6, 3,  '#ddaa00');
+  // Side plate star
+  S(2,  6,  2, 2,  '#ffdd00');
+  S(1,  5,  2, 4,  '#ffdd00');
+  S(24, 6,  2, 2,  '#ffdd00');
+  S(23, 5,  2, 4,  '#ffdd00');
+
+  // Sparkle shimmer (animated)
+  const twinkle = Math.abs(Math.sin(collectibleBob * 1.5));
+  ctx.fillStyle = `rgba(255,255,180,${twinkle * 0.8})`;
+  ctx.fillRect(x + 8,  y + 0,  2, 2);
+  ctx.fillRect(x + 17, y + 8,  2, 2);
+  ctx.fillRect(x + 5,  y + 10, 2, 2);
+}
+
+function drawTacoItem(x, y) {
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  // ── Warm orange glow halo ──
+  const glowPulse = 0.55 + 0.2 * Math.sin(collectibleBob * 1.2);
+  const grd = ctx.createRadialGradient(x+13, y+11, 2, x+13, y+11, 22);
+  grd.addColorStop(0,   `rgba(255,160,20,${glowPulse})`);
+  grd.addColorStop(0.5, `rgba(255,100,0,${glowPulse * 0.4})`);
+  grd.addColorStop(1,   'rgba(255,80,0,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(x - 10, y - 10, 46, 42);
+
+  // ── Taco shell — doubled in scale ──
+  // Shell outer dark
+  S(0,   8,  26, 14, '#8a4a10');
+  // Shell body
+  S(1,   6,  24, 16, '#c07820');
+  S(1,   6,  24, 14, '#d89030');
+  // Shell top highlight
+  S(2,   6,  22,  4, '#f0b848');
+  // Shell inner shadow
+  S(3,  10,  20, 10, '#8a4808');
+  // Shell ends curve
+  S(0,   8,  3,  14, '#a06018');
+  S(23,  8,  3,  14, '#a06018');
+
+  // ── Fillings peeking out the top ──
+  // Lettuce base
+  S(2,   2,  22,  6, '#1a7a18');
+  // Lettuce frilly top
+  S(2,   0,  4,   5, '#2a9a28');
+  S(7,  -1,  4,   6, '#38b030');
+  S(12,  0,  4,   5, '#2a9a28');
+  S(17,  1,  4,   4, '#38b030');
+  S(4,   1,  3,   3, '#44c038'); // bright frills
+  S(10,  0,  3,   4, '#44c038');
+  S(16,  0,  3,   3, '#44c038');
+
+  // Meat (chunky crumbles)
+  S(3,   6,  7,   6, '#7a3a10');
+  S(11,  6,  6,   5, '#6a2e0c');
+  S(17,  7,  5,   5, '#8a4a18');
+  S(6,   8,  4,   4, '#5a2808');
+  S(14,  8,  4,   3, '#7a3a10');
+
+  // Cheese (bright yellow drips)
+  S(5,   4,  5,   8, '#f8cc18');
+  S(14,  4,  5,   7, '#f0c010');
+  S(9,   3,  4,   6, '#ffe030');
+  S(6,   5,  2,   4, '#fff060'); // bright drip highlight
+  S(15,  5,  2,   3, '#fff060');
+
+  // Tomato chunks
+  S(4,   8,  4,   4, '#cc2a10');
+  S(16,  8,  4,   4, '#dd3018');
+  S(10,  9,  3,   3, '#ee3a20');
+  S(5,   9,  2,   2, '#ff4422'); // bright tomato highlight
+  S(17,  9,  2,   2, '#ff4422');
+
+  // Sour cream dollop
+  S(9,   4,  4,   5, '#f8f4e8');
+  S(10,  3,  2,   3, '#ffffff');
+
+  // Salsa drips
+  S(6,   2,  3,   5, '#cc2200');
+  S(17,  3,  3,   4, '#cc2200');
+  S(12,  1,  2,   4, '#dd3310');
+
+  // Cilantro sprigs (tiny green flecks)
+  S(8,   2,  2,   2, '#44aa30');
+  S(13,  1,  2,   2, '#44aa30');
+  S(19,  3,  2,   2, '#44aa30');
+
+  // ── Steam wisps (animated) ──
+  const steamAnim = Math.floor(collectibleBob * 1.5) % 4;
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillRect(x + 6  + (steamAnim > 1 ? 1 : 0), y - 5,  2, 5);
+  ctx.fillRect(x + 13 - (steamAnim > 2 ? 1 : 0), y - 7,  2, 6);
+  ctx.fillRect(x + 19 + (steamAnim > 0 ? 1 : 0), y - 4,  1, 4);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillRect(x + 9,  y - 6, 1, 4);
+  ctx.fillRect(x + 16, y - 5, 1, 3);
+}
+
+
+function drawGoldenChile(x, y) {
+  ctx.save();
+  ctx.globalAlpha = 1;
+
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  // ── Iridescent rotating glow ──
+  const t = collectibleBob;
+  for (let ring = 3; ring >= 0; ring--) {
+    const r = 18 + ring * 6;
+    const hue1 = (t * 60 + ring * 40) % 360;
+    const hue2 = (hue1 + 60) % 360;
+    const alpha = (0.12 - ring * 0.025) * (0.8 + 0.2 * Math.sin(t + ring));
+    const grd = ctx.createRadialGradient(x+9, y+13, 0, x+9, y+13, r);
+    grd.addColorStop(0,   `hsla(${hue1},100%,70%,${alpha * 2})`);
+    grd.addColorStop(0.5, `hsla(${hue2},100%,60%,${alpha})`);
+    grd.addColorStop(1,   'hsla(50,100%,50%,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(x+9, y+13, r, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Spinning star sparkles around chile
+  for (let sp = 0; sp < 6; sp++) {
+    const ang  = t * 1.5 + (sp / 6) * Math.PI * 2;
+    const dist = 14 + Math.sin(t * 2 + sp) * 3;
+    const sx   = x + 9 + Math.cos(ang) * dist;
+    const sy   = y + 13 + Math.sin(ang) * dist * 0.6;
+    const size = 1 + Math.abs(Math.sin(t * 3 + sp));
+    ctx.fillStyle = `rgba(255,255,150,${0.6 + 0.4*Math.sin(t*2+sp)})`;
+    ctx.fillRect(Math.round(sx - size/2), Math.round(sy - size/2), Math.round(size)+1, Math.round(size)+1);
+  }
+
+  // ── Chile body — golden yellow ──
+  // Main pepper body
+  S(4,  6,  10, 16, '#c8920a'); // dark gold shadow
+  S(3,  5,  10, 16, '#e8aa10'); // body
+  S(3,  5,  10, 14, '#f4c020'); // body highlight
+  S(4,  5,   4, 12, '#ffd840'); // bright left sheen
+  S(3,  5,   3,  8, '#ffe860'); // brightest edge
+
+  // Pepper taper to tip
+  S(5, 20,   8,  4, '#d4a010');
+  S(6, 23,   6,  3, '#c09008');
+  S(7, 25,   4,  2, '#b08008');
+  S(8, 26,   2,  2, '#a07008');
+
+  // Pepper shoulder (top bumps)
+  S(3,  3,  12,  4, '#e8b018');
+  S(4,  2,  10,  3, '#f4c828');
+  S(5,  1,   8,  3, '#ffd840');
+
+  // ── Stem & cap ──
+  S(7,  -3,  4,  5, '#2a7a10'); // stem
+  S(6,  -4,  2,  3, '#38a018'); // stem left leaf
+  S(9,  -4,  2,  3, '#38a018'); // stem right leaf
+  S(7,  -2,  4,  2, '#44b820'); // stem highlight
+  // Cap (calyx)
+  S(5,   0,  8,  3, '#1a6008');
+  S(6,   0,  6,  2, '#2a8018');
+
+  // ── Surface highlights & texture ──
+  S(4,   7,  2,  6, '#ffe870'); // specular highlight
+  S(4,   6,  1,  3, '#ffffff'); // bright glint
+  // Vertical crease lines
+  S(8,   7,  1, 12, '#d4a010');
+  S(11,  8,  1, 10, '#c89008');
+
+  // ── Gold shimmer overlay (animated) ──
+  const shimmer = Math.abs(Math.sin(t * 2.5));
+  ctx.fillStyle = `rgba(255,240,100,${shimmer * 0.35})`;
+  ctx.fillRect(x+3, y+5, 10, 16);
+  ctx.fillStyle = `rgba(255,255,200,${shimmer * 0.5})`;
+  ctx.fillRect(x+4, y+6, 3, 8);
+
+  ctx.restore();
+}
+function drawPopups() {
+  popups.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillText(p.text, Math.round(p.x) + 1, Math.round(p.y) + 1);
+    // Text
+    ctx.fillStyle = p.col;
+    ctx.fillText(p.text, Math.round(p.x), Math.round(p.y));
+    ctx.restore();
+  });
+}
+
+
+function drawRedChiliPepper(x, y) {
+  ctx.save();
+  ctx.globalAlpha = 1;
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  // Glow
+  const grd = ctx.createRadialGradient(x+6, y+10, 1, x+6, y+10, 14);
+  grd.addColorStop(0,   `rgba(255,80,0,${0.4 + 0.15*Math.sin(collectibleBob*1.4)})`);
+  grd.addColorStop(1,   'rgba(255,40,0,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(x-8, y-6, 28, 32);
+
+  // Pepper body
+  S(2,  4, 8, 14, '#aa2000');
+  S(1,  4, 8, 14, '#cc2800');
+  S(1,  4, 8, 12, '#ee3800');
+  S(2,  4, 3,  9, '#ff6030'); // sheen
+  S(1,  4, 2,  5, '#ff8050');
+  // Taper tip
+  S(2, 17, 6,  4, '#cc2800');
+  S(3, 20, 4,  3, '#aa2000');
+  S(4, 22, 2,  2, '#882000');
+  // Stem + cap
+  S(3, -1, 4,  6, '#2a8010');
+  S(2,  0, 2,  3, '#44aa18');
+  S(5,  0, 2,  3, '#44aa18');
+  S(3, -1, 4,  2, '#55cc20');
+  // Flame wisps
+  const fw = Math.floor(collectibleBob * 2) % 3;
+  ctx.fillStyle = `rgba(255,160,0,${0.6+0.3*Math.sin(collectibleBob*2)})`;
+  ctx.fillRect(x+1+fw, y-4, 2, 4);
+  ctx.fillRect(x+6-fw, y-5, 2, 5);
+  ctx.restore();
+}
+
+function drawProjectiles() {
+  projectiles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, p.life / 20);
+    if (p.type === 'fist')     drawFistProjectile(p);
+    else if (p.type === 'burrito') drawBurritoProjectile(p);
+    else if (p.type === 'fireball') drawFireballProjectile(p);
+    ctx.restore();
+  });
+}
+
+function drawFistProjectile(p) {
+  const x = Math.round(p.x), y = Math.round(p.y);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+  const pulse = 0.7 + 0.3*Math.sin(frame*0.3);
+
+  // Golden shockwave trail
+  ctx.fillStyle = `rgba(255,200,0,${0.15*pulse})`;
+  ctx.fillRect(x - 30, y - 8, 40, p.h + 16);
+
+  // Fist outline (huge)
+  S(0,  6, p.w, p.h - 12, '#cc8800');
+  S(0,  4, p.w, p.h -  8, '#e8a000');
+  S(0,  4, p.w, p.h - 12, '#ffcc00'); // gold face
+  S(0,  4, 6,   p.h - 12, '#ffe060'); // knuckle sheen
+
+  // Knuckle lines
+  const kh = Math.floor(p.h / 4);
+  for (let k = 0; k < 3; k++) {
+    S(4, 6 + k*kh, p.w - 6, 2, '#cc9900');
+    S(4, 7 + k*kh, p.w - 6, 1, '#ffe060');
+  }
+
+  // Motion lines behind fist
+  ctx.fillStyle = 'rgba(255,204,0,0.5)';
+  for (let m = 0; m < 4; m++) {
+    ctx.fillRect(x - 10 - m*12, y + 6 + m*3, 10, 3);
+  }
+
+  // Stars bursting in front
+  const starPulse = Math.abs(Math.sin(frame*0.5));
+  ctx.fillStyle = `rgba(255,255,180,${starPulse*0.9})`;
+  ctx.fillRect(x + p.w,     y + 8,  5, 5);
+  ctx.fillRect(x + p.w + 4, y + 4,  3, 3);
+  ctx.fillRect(x + p.w + 2, y + 14, 4, 4);
+}
+
+function drawBurritoProjectile(p) {
+  const x = Math.round(p.x), y = Math.round(p.y);
+  const S = (dx,dy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+dx,y+dy,w,h); };
+
+  // Rocket exhaust flame trail
+  for (let t = 1; t <= 5; t++) {
+    const tw = 8 + t*3, th = p.h - 4 - t*2;
+    ctx.fillStyle = `rgba(${255-t*20},${80-t*10},0,${0.5-t*0.08})`;
+    ctx.fillRect(x - 6 - t*6, y + 2 + t, tw, th);
+  }
+
+  // Burrito body — wrapped tight, torpedo shape
+  // Wrap cloth (tan/cream)
+  S(3,  2, p.w - 6, p.h - 4, '#c8a050');
+  S(2,  3, p.w - 4, p.h - 6, '#ddb860');
+  S(2,  3, p.w - 4, 4,       '#eacc78'); // top highlight
+  // Nose cone (pointy right end)
+  S(p.w-6, 3,   6, p.h-6, '#c89040');
+  S(p.w-4, 4,   4, p.h-8, '#b87838');
+  S(p.w-2, 5,   2, p.h-10,'#a06830');
+  // Filling stripe at middle
+  S(4, 6, p.w-10, 2, '#8a3a10'); // meat
+  S(4, 9, p.w-10, 2, '#2a8020'); // lettuce
+  // Wrap end (left)
+  S(0, 4, 5, p.h-8, '#b89040');
+  // Wrap twist lines
+  for (let w2 = 0; w2 < p.w-6; w2 += 8) {
+    S(4+w2, 2, 2, p.h-4, 'rgba(100,60,0,0.2)');
+  }
+  // Speed fins
+  S(2, 0,  8, 3, '#cc9a30');
+  S(2, p.h-3, 8, 3, '#cc9a30');
+}
+
+function drawFireballProjectile(p) {
+  const x = Math.round(p.x), y = Math.round(p.y);
+  const flicker = Math.sin(frame * 0.5);
+
+  // Outer flame halo
+  const grd = ctx.createRadialGradient(x + p.w/2, y + p.h/2, 2, x + p.w/2, y + p.h/2, p.w);
+  grd.addColorStop(0,   'rgba(255,220,80,0.9)');
+  grd.addColorStop(0.4, 'rgba(255,100,0,0.7)');
+  grd.addColorStop(1,   'rgba(200,0,0,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(x - 4, y - 4, p.w + 8, p.h + 8);
+
+  // Core fireball
+  ctx.fillStyle = '#ff6600';
+  ctx.fillRect(x + 2, y + 2, p.w - 4, p.h - 4);
+  ctx.fillStyle = '#ffaa00';
+  ctx.fillRect(x + 4, y + 3, p.w - 8, p.h - 6);
+  ctx.fillStyle = '#ffee00';
+  ctx.fillRect(x + 6, y + 4, p.w - 12, p.h - 8);
+  ctx.fillStyle = 'rgba(255,255,200,0.8)';
+  ctx.fillRect(x + 8, y + 5, p.w - 16, p.h - 10);
+
+  // Flame tongues (animated)
+  const ft = Math.floor(frame * 0.3) % 3;
+  ctx.fillStyle = '#ff4400';
+  ctx.fillRect(x + p.w - 2, y + 1 + ft, 6,  4);
+  ctx.fillRect(x + p.w,     y + 7 - ft, 4,  3);
+  ctx.fillStyle = '#ffaa00';
+  ctx.fillRect(x + p.w - 1, y + 2 + ft, 4,  2);
+
+  // Smoke trail
+  for (let s = 1; s <= 4; s++) {
+    ctx.fillStyle = `rgba(80,40,0,${0.15-s*0.03})`;
+    ctx.fillRect(x - s*8, y + 3, 8, p.h - 6);
+  }
+
+  // Ember sparks
+  ctx.fillStyle = `rgba(255,200,0,${0.7+flicker*0.3})`;
+  ctx.fillRect(x - 4,  y + 1, 3, 3);
+  ctx.fillRect(x - 8,  y + p.h - 4, 2, 2);
+  ctx.fillRect(x + p.w + 4, y,      3, 3);
+}
+
+function drawParticles() {
+  player.particles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(Math.round(p.x), Math.round(p.y), p.r, p.r);
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawScore() {
+  // Inline HUD updated via DOM
+}
+
+// --- Collision ---
+function collides(a, b) {
+  const margin = 6;
+  return (
+    a.x + margin < b.x + b.w - margin &&
+    a.x + a.w - margin > b.x + margin &&
+    a.y + margin < b.y + b.h &&
+    a.y + a.h > b.y + margin
+  );
+}
+
+// Generous collision for collectibles — no margin shrink, slightly expanded
+function collidesCollectible(player, item) {
+  const expand = 4; // expand item hitbox slightly so edge touches count
+  return (
+    player.x            < item.x + item.w + expand &&
+    player.x + player.w > item.x - expand &&
+    player.y            < item.y + item.h + expand &&
+    player.y + player.h > item.y - expand
+  );
+}
+
+// --- Input ---
+function jump() {
+  if (state === 'idle' || state === 'dead') { startGame(); return; }
+  if (!player.jumping) {
+    player.vy = JUMP_FORCE;
+    player.jumping = true;
+    spawnParticles(player.x, player.y + player.h, C.accent);
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); jump(); }
+  if (e.code === 'Enter' && state === 'playing') { e.preventDefault(); fireProjectile(); }
+});
+
+function fireProjectile() {
+  // Priority: Fist > Burrito > Fireball
+  const cx = player.x + player.w;
+  const cy = player.y + player.h / 2;
+
+  if (hasFist) {
+    hasFist = false;
+    // Golden Lucha Fist — wide punch that sweeps the whole screen
+    projectiles.push({
+      type: 'fist',
+      x: cx, y: player.y - 48,
+      w: 44, h: 52,
+      vx: 14,
+      life: 120,
+      bonus: 100,
+      col: '#ffcc00',
+      hitText: '👊 ¡KNOCK OUT!',
+    });
+    for (let i = 0; i < 10; i++) spawnParticles(cx, cy, '#ffcc00');
+    popups.push({ x: cx + 20, y: cy - 10, text: '👊 LUCHA FIST!', life: 1.0, col: '#ffcc00' });
+    return;
+  }
+  if (hasBurrito) {
+    hasBurrito = false;
+    // Super Burrito — rocket-shaped, fast, pierces through multiple rivals
+    projectiles.push({
+      type: 'burrito',
+      x: cx + 4, y: player.y - 36,
+      w: 40, h: 22,
+      vx: 18,
+      life: 100,
+      bonus: 75,
+      col: '#d4a020',
+      hitText: '🌯 ¡SUPER BURRITO!',
+    });
+    for (let i = 0; i < 8; i++) spawnParticles(cx, cy, '#ff8c00');
+    popups.push({ x: cx + 20, y: cy - 10, text: '🌯 SUPER BURRITO!', life: 1.0, col: '#d4a020' });
+    return;
+  }
+  if (hasFireball) {
+    hasFireball = false;
+    // Launch from luchador's raised fist — aim mid-height of rivals
+    const throwY = player.y - 30; // mid-body of player (well above ground)
+    projectiles.push({
+      type: 'fireball',
+      x: cx + 4,
+      y: throwY,
+      w: 30, h: 24,   // bigger hitbox for reliable collision
+      vx: 20,          // fast rightward throw
+      life: 120,
+      bonus: 60,
+      col: '#ff4400',
+      hitText: '🔥 ¡FUEGO!',
+    });
+    for (let i = 0; i < 12; i++) spawnParticles(cx, throwY + 12, '#ff4400');
+    for (let i = 0; i < 6; i++)  spawnParticles(cx, throwY + 12, '#ffaa00');
+    popups.push({ x: cx + 20, y: throwY - 8, text: '🔥 FIREBALL!', life: 1.0, col: '#ff4400' });
+  }
+}
+canvas.addEventListener('pointerdown', jump);
+overlayBtn.addEventListener('click', e => { e.stopPropagation(); startGame(); e.target.blur(); });
+
+// --- Game lifecycle ---
+function startGame() {
+  state = 'playing';
+  score = 0;
+  speed = 4;
+  obstacles = [];
+  obstacleCooldown = 60;
+  collectibles = [];
+  collectibleCooldown = 180;
+  popups = [];
+  invincible = 0;
+  tacoCount = 0; hasBurrito = false; hasFist = false; hasFireball = false;
+  projectiles = [];
+  resetPlayer();
+  overlay.classList.add('hidden');
+}
+
+function gameOver() {
+  state = 'dead';
+  if (score > hiScore) hiScore = score;
+  hiEl.textContent = String(hiScore).padStart(5,'0');
+
+  overlayTitle.textContent = '¡FIN!';
+  const isHi = score >= hiScore;
+  overlaySub.innerHTML = `
+    <span style="font-size:1.1rem;color:#ffcc00;text-shadow:0 0 16px rgba(255,204,0,0.8);">
+      ${String(Math.floor(score)).padStart(5,'0')}
+    </span><br>
+    <span style="font-size:0.55rem;color:#a08060;letter-spacing:2px;">YOUR SCORE</span><br><br>
+    ${isHi ? '<span style="font-size:0.65rem;color:#ff4f5e;animation:pulse 0.8s infinite alternate;">⭐ NEW HIGH SCORE! ⭐</span><br><br>' : ''}
+    <span style="font-size:0.6rem;">¡ÁNDALE! TRY AGAIN</span>
+  `;
+  overlayBtn.textContent = '↺ RETRY';
+  overlay.classList.remove('hidden');
+
+  // Death particles
+  spawnParticles(player.x + player.w/2, player.y + player.h/2, C.accent2);
+  for(let i=0;i<3;i++) spawnParticles(player.x + player.w/2, player.y + player.h/2, C.accent);
+}
+
+// --- Main loop ---
+function tick() {
+  frame++;
+
+  if (state === 'playing') {
+    // Speed ramp
+    speed = 4 + Math.sqrt(score) * 0.08;
+    score += speed * 0.05;
+    scoreEl.textContent = String(Math.floor(score)).padStart(5,'0');
+
+    // Player physics
+    player.vy += GRAVITY;
+    player.y += player.vy;
+
+    if (player.y >= GROUND_Y) {
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.jumping = false;
+        }
+
+    // Trail
+    if (frame % 2 === 0) {
+      player.trail.push({x: player.x, y: player.y});
+      if (player.trail.length > 5) player.trail.shift();
+    }
+
+    // Obstacles
+    obstacleCooldown--;
+    if (obstacleCooldown <= 0) {
+      spawnObstacle();
+      obstacleCooldown = Math.max(40, 100 - score*0.05) + Math.random()*40;
+    }
+    obstacles.forEach(o => o.x -= speed);
+    obstacles = obstacles.filter(o => o.x > -60);
+
+    // Collision
+    const playerBox = {x: player.x, y: player.y, w: player.w, h: player.h};
+    if (invincible <= 0) {
+      // Normal — any obstacle touch = death
+      for (const obs of obstacles) {
+        if (collides(playerBox, obs)) { gameOver(); return; }
+      }
+    } else {
+      // INVINCIBLE — smash through rivals theatrically, ignore props
+      obstacles = obstacles.filter(obs => {
+        if (!RIVAL_TYPES.includes(obs.type)) return true;
+        // Expand player box so any grazing contact triggers smash
+        const smashBox = {
+          x: playerBox.x - 6,
+          y: playerBox.y - 10,
+          w: playerBox.w + 12,
+          h: playerBox.h + 10,
+        };
+        const hit =
+          smashBox.x < obs.x + obs.w &&
+          smashBox.x + smashBox.w > obs.x &&
+          smashBox.y < obs.y + obs.h &&
+          smashBox.y + smashBox.h > obs.y;
+        if (hit) {
+          score += 150;
+          scoreEl.textContent = String(Math.floor(score)).padStart(5,'0');
+          // Theatrical explosion burst
+          const cx = obs.x + obs.w / 2;
+          const cy = obs.y + obs.h / 2;
+          for (let i = 0; i < 20; i++) spawnParticles(cx, cy, '#ffd700');
+          for (let i = 0; i < 10; i++) spawnParticles(cx, cy, '#ffffff');
+          for (let i = 0; i < 8;  i++) spawnParticles(cx, cy, '#ff4400');
+          popups.push({ x: cx, y: obs.y - 8, text: '✨ +150 ¡APLASTADO!', life: 1.4, col: '#ffd700' });
+          return false; // rival removed
+        }
+        return true;
+      });
+    }
+    // Count down invincibility
+    if (invincible > 0) {
+      invincible--;
+      invincibleGlow += 0.12;
+    }
+
+    // Collectibles spawn + movement
+    collectibleCooldown--;
+    if (collectibleCooldown <= 0) {
+      spawnCollectible();
+      collectibleCooldown = 140 + Math.floor(Math.random() * 120);
+    }
+    collectibleBob += 0.08;
+    collectibles.forEach(c => {
+      c.x -= speed;
+      c.bob += 0.07;
+    });
+
+    // Collectible collection
+    collectibles = collectibles.filter(c => {
+      // Use actual bobbed y position for accurate hit detection
+      const bobY = Math.sin(c.bob) * 3;
+      const cBox = { x: c.x, y: c.y + bobY, w: c.w, h: c.h };
+      if (collidesCollectible(playerBox, cBox)) {
+        const bonus = c.type === 'belt' ? 50 : c.type === 'taco' ? 20 : c.type === 'chili_pepper' ? 15 : 10;
+        score += bonus;
+        const col = c.type === 'belt' ? '#ffcc00' : c.type === 'taco' ? '#ff8c00' : c.type === 'chili_pepper' ? '#ff4400' : '#ffd700';
+        for (let i = 0; i < 16; i++) spawnParticles(c.x + c.w/2, c.y + c.h/2, col);
+
+        // Power-up charging
+        if (c.type === 'chile') {
+          invincible = 600;
+          for (let i = 0; i < 20; i++) spawnParticles(c.x + c.w/2, c.y + c.h/2, '#ffffff');
+        } else if (c.type === 'belt') {
+          hasFist = true;
+        } else if (c.type === 'taco') {
+          tacoCount++;
+          if (tacoCount >= 3) { hasBurrito = true; tacoCount = 0; }
+        } else if (c.type === 'chili_pepper') {
+          hasFireball = true;
+        }
+
+        const popText = c.type === 'belt'
+          ? '+50 ¡FIST CHARGED!'
+          : c.type === 'taco'
+            ? (tacoCount === 0 && hasBurrito ? '+20 ¡BURRITO READY!' : `+20 TACO ${tacoCount}/3`)
+            : c.type === 'chili_pepper'
+              ? '+15 🔥 FIREBALL!'
+              : '✨ ¡INVENCIBLE!';
+        popups.push({
+          x: c.x + c.w/2,
+          y: c.y - 4,
+          text: popText,
+          life: 1.4,
+          col,
+        });
+        return false; // remove collected item
+      }
+      return c.x > -40; // remove off-screen
+    });
+
+    // Projectiles — move + collide with rivals only
+    projectiles.forEach(p => {
+      p.x += p.vx;
+      p.life--;
+    });
+    projectiles = projectiles.filter(p => {
+      if (p.x > W + 80 || p.life <= 0) return false;
+      let keepProjectile = true;
+      obstacles = obstacles.filter(obs => {
+        if (!RIVAL_TYPES.includes(obs.type)) return true; // chairs/cans are immune
+        // Simple AABB overlap — no margins, no expansion needed
+        const hit = p.x < obs.x + obs.w &&
+                    p.x + p.w > obs.x &&
+                    p.y < obs.y + obs.h &&
+                    p.y + p.h > obs.y;
+        if (hit) {
+          score += p.bonus;
+          scoreEl.textContent = String(Math.floor(score)).padStart(5,'0');
+          for (let i = 0; i < 14; i++) spawnParticles(obs.x + obs.w/2, obs.y + Math.floor(obs.h/2), p.col);
+          popups.push({ x: obs.x + obs.w/2, y: obs.y - 8, text: p.hitText, life: 1.2, col: p.col });
+          if (p.type === 'fist') keepProjectile = false; // fist stops on first hit
+          return false; // rival destroyed
+        }
+        return true;
+      });
+      return keepProjectile;
+    });
+
+    // Update HUD power-up display
+    let hudHtml = '';
+    if (hasFist)     hudHtml += '<span style="color:#ffcc00">👊 FIST</span> ';
+    if (hasBurrito)  hudHtml += '<span style="color:#d4a020">🌯 BURRITO</span> ';
+    if (hasFireball) hudHtml += '<span style="color:#ff4400">🔥 FIREBALL</span> ';
+    if (tacoCount > 0) hudHtml += `<span style="color:#ff8c00">🌮×${tacoCount}</span>`;
+    powerupEl.innerHTML = hudHtml;
+
+    // Update popups
+    popups.forEach(p => { p.y -= 0.6; p.life -= 0.025; });
+    popups = popups.filter(p => p.life > 0);
+
+    // Scroll tile floor
+    tileOffset += speed;
+    if (frame % 6 === 0) rivalFrame++;
+    // Update clock every 60 frames
+    clockTick++;
+    if (clockTick >= 60) { clockTime = new Date(); clockTick = 0; }
+    // Ceiling fan spins faster with game speed
+    fanAngle += 0.02 + speed * 0.005;
+    // Scroll shelf at half speed (parallax)
+    shelfOffset += speed * 0.5;
+    // Papel picado scrolls slowest (far background feel)
+    papelOffset += speed * 0.35;
+  }
+
+  // Fan + piñata animate when not playing
+  if (state !== 'playing') { fanAngle += 0.025; }
+  pinataVel += -PINATA_GRAV * Math.sin(pinataAngle);
+  pinataVel *= PINATA_DAMP;
+  pinataAngle += pinataVel;
+
+  // Popups always drift
+  popups.forEach(p => { p.y -= 0.3; p.life -= 0.02; });
+  popups = popups.filter(p => p.life > 0);
+
+  // Particles always update
+  player.particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life -= p.decay;
+  });
+  player.particles = player.particles.filter(p => p.life > 0);
+
+  // --- Draw ---
+  drawBackground();
+  drawWallArt();
+  drawCeilingFan();
+  drawEdisonBulbs();
+  drawNeonSign();
+  drawPinata();
+  drawShelvesAndDecor();
+  drawGround();
+  drawTiles();
+  drawParticles();
+  obstacles.forEach(drawObstacle);
+  drawCollectibles();
+  drawProjectiles();
+  if (state !== 'dead') drawPlayer();
+  drawPopups();
+
+  // Papel picado drawn last so it overlays everything at top
+  drawPapelPicado();
+
+  // Scanline effect (subtle)
+  ctx.fillStyle = 'rgba(80,20,0,0.03)';
+  for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, W, 2);
+
+  gameLoop = requestAnimationFrame(tick);
+}
+
+// Init
+hiEl.textContent = String(hiScore).padStart(5,'0');
+scoreEl.textContent = '00000';
+tick();
+</script>
+</body>
+</html>
