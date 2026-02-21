@@ -78,10 +78,10 @@ This is the best part: **every single element in this game is made of rectangles
 
 ```
 el-rayo/
-└── index.html    ← The entire game lives here (~1,400 lines)
+└── index.html ➡️ The entire game lives here (~1,400 lines)
 ```
 
-That's it. One file. No build process, no dependencies, no install steps. No folder called `node_modules` that weighs more than a small car. 🚗
+That's it. One file. No build process, no dependencies, no install steps. No folder called `node_modules` that weighs more than a heavyweight champion. 👑
 
 ---
 
@@ -89,17 +89,17 @@ That's it. One file. No build process, no dependencies, no install steps. No fol
 
 1. Download `index.html`
 2. Open it in any modern web browser
-3. Press **Start** and jump! 🦘
+3. Press **LUCHAR** and jump! 🦘
 
-Or play it directly at: `https://[your-github-username].github.io/el-rayo`
+Or play it directly at: `https://oscaram007.github.io/elrayo4.0/`
 
 ---
 
 ## 📚 About This Project
 
-This game was built as a **personal learning project** to explore what's possible with just the tools that come built into every web browser. It started as a curiosity — *how much can you make without importing anything?* — and grew into a complete, polished game. Somewhere in the middle there was a phase where the luchador just looked like a sad yellow brick, but we don't talk about that. 🧱
+This game was built as a **personal learning project** to explore what's possible with just the tools that come built into every web browser. It started as a curiosity and grew into a complete, polished game. Somewhere in the middle there was a phase where the luchador just looked like a sad red and yellow brick (but we don't talk about that). 🟥🟨🧱
 
-As a librarian, I spend my days helping people find information and navigate complex systems. Learning to code felt like a natural extension of that curiosity — understanding *how* digital tools are built, not just how to use them. This project represents dozens of hours of reading documentation 📖, debugging 🐛, and iterating until things worked. Mostly debugging. So much debugging.
+As a librarian, I spend my days helping people find information and navigate complex systems. Learning to code felt like a natural extension of that curiosity. There needs to be an understanding of *how* digital tools are built, not just how to use them. This project represents dozens of hours of reading documentation 📖, debugging 🐛, and iterating until things worked. Mostly debugging and stress eating (lol...jk). So many tacos. 😔
 
 ---
 
