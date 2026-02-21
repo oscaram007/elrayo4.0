@@ -141,4 +141,10 @@ The following are strictly prohibited without explicit written authorization:
 
 ---
 
+## 📞 Contact
+
+For licensing inquiries, permission requests, or other questions, please contact Oscar A. Martinez via LinkedIn.
+
+---
+
 *Made with curiosity, patience, and way too many rectangles. 🟥🟨🟩*
